@@ -1,19 +1,28 @@
 package tu.kielce.walczak.MusicStore.entity;
 
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import javax.persistence.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "artist")
-@Data
+@Getter
+@Setter
 public class Artist {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "artistId")
-    private long artistId;
+    private Long artistId;
 
     @Column(name = "artistName")
     private String artistName;
+
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "artist")
+    private Set<Album> albums = new HashSet<>();
 }

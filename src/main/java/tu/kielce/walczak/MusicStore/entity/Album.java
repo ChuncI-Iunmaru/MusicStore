@@ -1,19 +1,23 @@
 package tu.kielce.walczak.MusicStore.entity;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import javax.persistence.*;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "album")
-@Data
+// Podobno jest bug jak się użyje @Date przy mapowaniu many to many itp
+@Getter
+@Setter
 public class Album {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "albumId")
-    private long albumId;
+    private Long albumId;
 
     @Column(name = "albumTitle")
     private String albumTitle;
@@ -21,8 +25,8 @@ public class Album {
     @Column(name = "albumYear")
     private String albumYear;
 
-    @OneToOne
-    @JoinColumn(name = "artistId", referencedColumnName = "artistId")
+    @ManyToOne
+    @JoinColumn(name = "artistId", nullable = false)
     private Artist artist;
 
     @Column(name = "albumPrice")

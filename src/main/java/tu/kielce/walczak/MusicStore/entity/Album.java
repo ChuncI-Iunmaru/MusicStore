@@ -1,5 +1,6 @@
 package tu.kielce.walczak.MusicStore.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -27,6 +28,7 @@ public class Album {
 
     @ManyToOne
     @JoinColumn(name = "artistId", nullable = false)
+    @JsonManagedReference
     private Artist artist;
 
     @Column(name = "albumPrice")

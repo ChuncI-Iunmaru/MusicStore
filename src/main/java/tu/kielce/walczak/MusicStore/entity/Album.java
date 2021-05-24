@@ -3,8 +3,10 @@ package tu.kielce.walczak.MusicStore.entity;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.data.util.Pair;
 
 import javax.persistence.*;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,4 +47,32 @@ public class Album {
             joinColumns = { @JoinColumn(name = "albumId") },
             inverseJoinColumns = { @JoinColumn(name = "subgenreId") })
     private List<Subgenre> subgenres;
+
+    public AbstractMap.SimpleEntry<Long, String> albumToVector() {
+        StringBuilder builder = new StringBuilder();
+        builder.append(this.artist.getArtistId()).append(';');
+        // Max 7 gatunków do albumu - wypełnij ile jest, reszta 0
+        int i = 0;
+        for (Genre g: genres) {
+            builder.append(g.getGenreId()).append(';');
+            i++;
+        }
+        for (; i < 7; i++) {
+            builder.append(0).append(';');
+        }
+        // Max 7 podgatunków do albumu - to samo
+        int j = 0;
+        for (Subgenre s: subgenres) {
+            builder.append(s.getSubgenreId()).append(';');
+            j++;
+        }
+        for (; j < 7; j++) {
+            builder.append(0).append(';');
+        }
+        // Usuń ostatni średnik
+        builder.deleteCharAt(builder.length()-1);
+
+        System.out.println(builder.toString());
+        return new AbstractMap.SimpleEntry<>(this.albumId, builder.toString());
+    }
 }

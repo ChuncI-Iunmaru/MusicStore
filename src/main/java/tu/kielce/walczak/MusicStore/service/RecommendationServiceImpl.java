@@ -20,10 +20,12 @@ public class RecommendationServiceImpl implements RecommendationService{
         this.albumRepository = albumRepository;
     }
 
+
     @Override
     @Transactional
     public List<AlbumWrapper> getTestRecommendations(Long albumId, int size) {
         List<Album> foundAlbums = albumRepository.findAll().stream().limit(size).collect(Collectors.toList());
+        foundAlbums.get(0).albumToVector();
         return foundAlbums.stream().map(album -> new AlbumWrapper(album, 1.5)).collect(Collectors.toList());
     }
 }

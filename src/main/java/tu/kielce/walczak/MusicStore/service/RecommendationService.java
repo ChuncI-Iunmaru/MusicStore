@@ -6,5 +6,5 @@ import tu.kielce.walczak.MusicStore.entity.Album;
 import java.util.List;
 
 public interface RecommendationService {
-    public List<AlbumWrapper> getTestRecommendations(Long albumid, int size);
+    List<AlbumWrapper> getTestRecommendations(Long albumid, int size);
 }

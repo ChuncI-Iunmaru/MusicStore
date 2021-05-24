@@ -20,7 +20,7 @@ public class RecommendationController {
 
     @GetMapping("/testRecommendations")
     public List<AlbumWrapper> getTestRecommendations(@RequestParam("id") Long albumId, @RequestParam("size") int size) {
-        System.out.println("Prośba o rekomendacje dla id=" + albumId + ", rozmiar listy=" + size);
+        System.out.println("Prośba o testowe rekomendacje dla id=" + albumId + ", rozmiar listy=" + size);
         return recommendationService.getTestRecommendations(albumId, size);
     }
 }

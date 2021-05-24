@@ -23,4 +23,10 @@ public class RecommendationController {
         System.out.println("Prośba o testowe rekomendacje dla id=" + albumId + ", rozmiar listy=" + size);
         return recommendationService.getTestRecommendations(albumId, size);
     }
+
+    @GetMapping("/euclidGenreRecs")
+    public List<AlbumWrapper> getEuclidGenreRecommendations(@RequestParam("id") Long albumId, @RequestParam("size") int size) {
+        System.out.println("Prośba o rekomendacje euclidGenre dla id=" + albumId + ", rozmiar listy=" + size);
+        return recommendationService.getEuclidGenreRecs(albumId, size);
+    }
 }

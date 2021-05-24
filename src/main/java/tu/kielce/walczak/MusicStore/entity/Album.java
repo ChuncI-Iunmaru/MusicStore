@@ -3,11 +3,9 @@ package tu.kielce.walczak.MusicStore.entity;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.data.util.Pair;
 
 import javax.persistence.*;
 import java.util.AbstractMap;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -82,21 +80,21 @@ public class Album {
         List<Long> first = this.getGenres().stream().map(Genre::getGenreId).collect(Collectors.toList());
         List<Long> second = a.getGenres().stream().map(Genre::getGenreId).collect(Collectors.toList());
         List<Long> intersection = first.stream().distinct().filter(second::contains).collect(Collectors.toList());
-        System.out.println(this.getAlbumTitle()+" gatunki: "+first+", rozmiar (pozytywne bity) = "+first.size());
-        System.out.println(a.getAlbumTitle()+ " gatunki: "+second+", rozmiar (pozytywne bity) = "+second.size());
-        System.out.println("Wspólne: "+intersection+", rozmiar (pozytywne bity) = "+intersection.size());
+//        System.out.println(this.getAlbumTitle()+" gatunki: "+first+", rozmiar (pozytywne bity) = "+first.size());
+//        System.out.println(a.getAlbumTitle()+ " gatunki: "+second+", rozmiar (pozytywne bity) = "+second.size());
+//        System.out.println("Wspólne: "+intersection+", rozmiar (pozytywne bity) = "+intersection.size());
         //sqrt(a+b-2c)
         return Math.sqrt(first.size()+second.size()-2*intersection.size());
     }
 
     public double getEuclidDistSubgenres(Album a) {
-        //Gatunki które w ogóle sa na liście to wszystkie pozytywne bity wektora flag podgatunków - reszta jest wyzerowana
+        //Podgatunki które w ogóle sa na liście to wszystkie pozytywne bity wektora flag podgatunków - reszta jest wyzerowana
         List<Long> first = this.getSubgenres().stream().map(Subgenre::getSubgenreId).collect(Collectors.toList());
         List<Long> second = a.getSubgenres().stream().map(Subgenre::getSubgenreId).collect(Collectors.toList());
         List<Long> intersection = first.stream().distinct().filter(second::contains).collect(Collectors.toList());
-        System.out.println(this.getAlbumTitle()+" podgatunki: "+first+", rozmiar (pozytywne bity) = "+first.size());
-        System.out.println(a.getAlbumTitle()+ " podgatunki: "+second+", rozmiar (pozytywne bity) = "+second.size());
-        System.out.println("Wspólne: "+intersection+", rozmiar (pozytywne bity) = "+intersection.size());
+//        System.out.println(this.getAlbumTitle()+" podgatunki: "+first+", rozmiar (pozytywne bity) = "+first.size());
+//        System.out.println(a.getAlbumTitle()+ " podgatunki: "+second+", rozmiar (pozytywne bity) = "+second.size());
+//        System.out.println("Wspólne: "+intersection+", rozmiar (pozytywne bity) = "+intersection.size());
         //sqrt(a+b-2c)
         return Math.sqrt(first.size()+second.size()-2*intersection.size());
     }

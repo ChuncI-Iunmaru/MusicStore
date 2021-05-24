@@ -9,4 +9,5 @@ public interface RecommendationService {
     List<AlbumWrapper> getTestRecommendations(Long albumid, int size);
     List<AlbumWrapper> getEuclidGenreRecs(Long albumId, int size);
     List<AlbumWrapper> getEuclidSubgenreRecs(Long albumId, int size);
+    List<AlbumWrapper> getMixedRecs(Long albumId, int size);
 }

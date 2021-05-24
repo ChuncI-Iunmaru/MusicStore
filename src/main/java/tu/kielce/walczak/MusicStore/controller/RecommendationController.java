@@ -35,4 +35,9 @@ public class RecommendationController {
         System.out.println("Prośba o rekomendacje euclidSubgenre dla id=" + albumId + ", rozmiar listy=" + size);
         return recommendationService.getEuclidSubgenreRecs(albumId, size);
     }
+    @GetMapping("/mixedRecs")
+    public List<AlbumWrapper> getMixedRecommendations(@RequestParam("id") Long albumId, @RequestParam("size") int size) {
+        System.out.println("Prośba o rekomendacje mixed dla id=" + albumId + ", rozmiar listy=" + size);
+        return recommendationService.getMixedRecs(albumId, size);
+    }
 }

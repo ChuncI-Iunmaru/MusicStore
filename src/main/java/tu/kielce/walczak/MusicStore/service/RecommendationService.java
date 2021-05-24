@@ -8,5 +8,5 @@ import java.util.List;
 public interface RecommendationService {
     List<AlbumWrapper> getTestRecommendations(Long albumid, int size);
     List<AlbumWrapper> getEuclidGenreRecs(Long albumId, int size);
-    //List<AlbumWrapper> getEuclidSubgenreRecs(Long albumId, int size);
+    List<AlbumWrapper> getEuclidSubgenreRecs(Long albumId, int size);
 }

@@ -122,12 +122,30 @@ public class RecommendationServiceImpl implements RecommendationService {
         }
     }
 
+    @Override
+    public List<AlbumWrapper> getEuclidSubgenreRecs(Long albumId, int size) {
+        List<AlbumWrapper> result = new ArrayList<>();
+        try {
+            List<RecommendedItem> recommendations = null;
+            recommendations = euclidSubgenresRecommender.mostSimilarItems(albumId, size);
+            for (RecommendedItem item : recommendations) {
+                Album recommended = albumRepository.findById(item.getItemID()).get();
+                System.out.println(recommended.getAlbumTitle() + " value: " + item.getValue());
+                result.add(new AlbumWrapper(recommended, item.getValue()));
+            }
+            return result;
+        } catch (TasteException e) {
+            e.printStackTrace();
+            return result;
+        }
+    }
+
     class GenreEuclidItemDistance implements ItemSimilarity {
 
         @Override
         public double itemSimilarity(long l, long l1) throws TasteException {
            Album first = albumRepository.findById(l).get();
-           Album second = albumRepository.findById(l).get();
+           Album second = albumRepository.findById(l1).get();
            // Tutaj zmiana znaku, bo te o najmniejszym dystansie są najbardziej podobne
            return -first.getEuclidDistGenres(second);
         }
@@ -152,7 +170,7 @@ public class RecommendationServiceImpl implements RecommendationService {
         @Override
         public double itemSimilarity(long l, long l1) throws TasteException {
             Album first = albumRepository.findById(l).get();
-            Album second = albumRepository.findById(l).get();
+            Album second = albumRepository.findById(l1).get();
             // Tutaj zmiana znaku, bo te o najmniejszym dystansie są najbardziej podobne
             return -first.getEuclidDistSubgenres(second);
         }

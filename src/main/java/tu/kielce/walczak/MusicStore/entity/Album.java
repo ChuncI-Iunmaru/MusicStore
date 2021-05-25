@@ -99,4 +99,18 @@ public class Album {
         return Math.sqrt(first.size()+second.size()-2*intersection.size());
     }
 
+    public double getCosineGenres(Album a) {
+        List<Long> first = this.getGenres().stream().map(Genre::getGenreId).collect(Collectors.toList());
+        List<Long> second = a.getGenres().stream().map(Genre::getGenreId).collect(Collectors.toList());
+        List<Long> intersection = first.stream().distinct().filter(second::contains).collect(Collectors.toList());
+        // c/sqrt(a+b)
+        return (double)intersection.size()/Math.sqrt(first.size()+second.size());
+    }
+
+    public double getCosineSubgenres(Album a) {
+        List<Long> first = this.getSubgenres().stream().map(Subgenre::getSubgenreId).collect(Collectors.toList());
+        List<Long> second = a.getSubgenres().stream().map(Subgenre::getSubgenreId).collect(Collectors.toList());
+        List<Long> intersection = first.stream().distinct().filter(second::contains).collect(Collectors.toList());
+        return (double)intersection.size()/Math.sqrt(first.size()+second.size());
+    }
 }

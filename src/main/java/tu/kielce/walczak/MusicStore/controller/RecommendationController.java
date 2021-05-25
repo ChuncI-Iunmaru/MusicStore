@@ -40,4 +40,10 @@ public class RecommendationController {
         System.out.println("Prośba o rekomendacje mixed dla id=" + albumId + ", rozmiar listy=" + size);
         return recommendationService.getMixedRecs(albumId, size);
     }
+
+    @GetMapping("/cosineRecs")
+    public List<AlbumWrapper> getCosineRecommendations(@RequestParam("id") Long albumId, @RequestParam("size") int size) {
+        System.out.println("Prośba o rekomendacje cosine item similarity dla id=" + albumId + ", rozmiar listy=" + size);
+        return recommendationService.getCosineRecs(albumId, size);
+    }
 }

@@ -30,6 +30,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     private ItemBasedRecommender euclidGenresRecommender;
     private ItemBasedRecommender euclidSubgenresRecommender;
     private ItemBasedRecommender mixedRecommender;
+    private ItemBasedRecommender cosineRecommender;
     private DataModel model;
 
     @PostConstruct
@@ -38,6 +39,7 @@ public class RecommendationServiceImpl implements RecommendationService {
         euclidGenresRecommender = new GenericItemBasedRecommender(model, new GenreEuclidItemDistance());
         euclidSubgenresRecommender = new GenericItemBasedRecommender(model, new SubgenreEuclidItemDistance());
         mixedRecommender = new GenericItemBasedRecommender(model, new MixedItemSimilarity());
+        cosineRecommender = new GenericItemBasedRecommender(model, new CosineItemSimilarity());
     }
 
     private DataModel getDummyPreferences() {
@@ -155,6 +157,19 @@ public class RecommendationServiceImpl implements RecommendationService {
         }
     }
 
+    @Override
+    @Transactional
+    public List<AlbumWrapper> getCosineRecs(Long albumId, int size) {
+        try {
+            List<RecommendedItem> recommendations = null;
+            recommendations = cosineRecommender.mostSimilarItems(albumId, size);
+            return wrapRecommendations(recommendations);
+        } catch (TasteException e) {
+            e.printStackTrace();
+            return Collections.emptyList();
+        }
+    }
+
     class GenreEuclidItemDistance implements ItemSimilarity {
 
         @Override
@@ -224,6 +239,31 @@ public class RecommendationServiceImpl implements RecommendationService {
             // System.out.println(first.getAlbumTitle() + "-" + second.getAlbumTitle() + ": wynikowe podobieństwo = " + similarity);
             // Im większy wynik tym lepiej
             return similarity;
+        }
+
+        @Override
+        public double[] itemSimilarities(long l, long[] longs) throws TasteException {
+            return new double[0];
+        }
+
+        @Override
+        public long[] allSimilarItemIDs(long l) throws TasteException {
+            return new long[0];
+        }
+
+        @Override
+        public void refresh(Collection<Refreshable> collection) {
+
+        }
+    }
+
+    class CosineItemSimilarity implements ItemSimilarity {
+        @Override
+        public double itemSimilarity(long l, long l1) throws TasteException {
+            Album first = albumRepository.findById(l).get();
+            Album second = albumRepository.findById(l1).get();
+            // Obie z taką samą wagą
+            return 0.5*first.getCosineGenres(second) + 0.5*first.getCosineSubgenres(second);
         }
 
         @Override

@@ -106,58 +106,52 @@ public class RecommendationServiceImpl implements RecommendationService {
         return foundAlbums.stream().map(album -> new AlbumWrapper(album, 1.5)).collect(Collectors.toList());
     }
 
-    public List<AlbumWrapper> getEuclidGenreRecs(Long albumId, int size) {
+    private List<AlbumWrapper> wrapRecommendations(List<RecommendedItem> recommendations) {
         List<AlbumWrapper> result = new ArrayList<>();
+        for (RecommendedItem item : recommendations) {
+            Album recommended = albumRepository.findById(item.getItemID()).get();
+            System.out.println(recommended.getAlbumTitle() + " value: " + item.getValue());
+            result.add(new AlbumWrapper(recommended, item.getValue()));
+        }
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public List<AlbumWrapper> getEuclidGenreRecs(Long albumId, int size) {
         try {
             List<RecommendedItem> recommendations = null;
             recommendations = euclidGenresRecommender.mostSimilarItems(albumId, size);
-            for (RecommendedItem item : recommendations) {
-                Album recommended = albumRepository.findById(item.getItemID()).get();
-                System.out.println(recommended.getAlbumTitle() + " value: " + item.getValue());
-                result.add(new AlbumWrapper(recommended, item.getValue()));
-            }
-            return result;
+            return wrapRecommendations(recommendations);
         } catch (TasteException e) {
             e.printStackTrace();
-            return result;
+            return Collections.emptyList();
         }
     }
 
     @Override
     @Transactional
     public List<AlbumWrapper> getEuclidSubgenreRecs(Long albumId, int size) {
-        List<AlbumWrapper> result = new ArrayList<>();
         try {
             List<RecommendedItem> recommendations = null;
             recommendations = euclidSubgenresRecommender.mostSimilarItems(albumId, size);
-            for (RecommendedItem item : recommendations) {
-                Album recommended = albumRepository.findById(item.getItemID()).get();
-                System.out.println(recommended.getAlbumTitle() + " value: " + item.getValue());
-                result.add(new AlbumWrapper(recommended, item.getValue()));
-            }
-            return result;
+            return wrapRecommendations(recommendations);
         } catch (TasteException e) {
             e.printStackTrace();
-            return result;
+            return Collections.emptyList();
         }
     }
 
     @Override
     @Transactional
     public List<AlbumWrapper> getMixedRecs(Long albumId, int size) {
-        List<AlbumWrapper> result = new ArrayList<>();
         try {
             List<RecommendedItem> recommendations = null;
             recommendations = mixedRecommender.mostSimilarItems(albumId, size);
-            for (RecommendedItem item : recommendations) {
-                Album recommended = albumRepository.findById(item.getItemID()).get();
-                System.out.println(recommended.getAlbumTitle() + " value: " + item.getValue());
-                result.add(new AlbumWrapper(recommended, item.getValue()));
-            }
-            return result;
+            return wrapRecommendations(recommendations);
         } catch (TasteException e) {
             e.printStackTrace();
-            return result;
+            return Collections.emptyList();
         }
     }
 
@@ -227,8 +221,7 @@ public class RecommendationServiceImpl implements RecommendationService {
             double subgenreDistance = 1 - (first.getEuclidDistSubgenres(second) / 7);
             similarity-=genreDistance;
             similarity-=subgenreDistance;
-            System.out.println(first.getAlbumTitle() + "-"
-                    + second.getAlbumTitle() + ": wynikowe podobieństwo = " + similarity);
+            // System.out.println(first.getAlbumTitle() + "-" + second.getAlbumTitle() + ": wynikowe podobieństwo = " + similarity);
             // Im większy wynik tym lepiej
             return similarity;
         }

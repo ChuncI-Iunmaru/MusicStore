@@ -6,7 +6,6 @@ import tu.kielce.walczak.MusicStore.dto.Purchase;
 import tu.kielce.walczak.MusicStore.dto.PurchaseResponse;
 import tu.kielce.walczak.MusicStore.service.CheckoutService;
 
-@CrossOrigin("http://localhost:4200")
 @RestController
 @RequestMapping("/api/checkout")
 public class CheckoutController {

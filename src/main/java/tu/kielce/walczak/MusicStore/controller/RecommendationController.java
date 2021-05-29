@@ -7,7 +7,6 @@ import tu.kielce.walczak.MusicStore.service.RecommendationService;
 
 import java.util.List;
 
-@CrossOrigin("http://localhost:4200")
 @RestController
 @RequestMapping("/api/rec")
 public class RecommendationController {

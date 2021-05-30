@@ -45,4 +45,10 @@ public class RecommendationController {
         System.out.println("Prośba o rekomendacje cosine item similarity dla id=" + albumId + ", rozmiar listy=" + size);
         return recommendationService.getCosineRecs(albumId, size);
     }
+
+    @GetMapping("/dummyUserRecs")
+    public List<AlbumWrapper> getDummyUserRecommendations(@RequestParam("id") Long userId, @RequestParam("size") int size) {
+        System.out.println("Prośba o rekomendacje pearson on user dla userId=" + userId + ", rozmiar listy=" + size);
+        return recommendationService.getDummyUserRecs(userId, size);
+    }
 }

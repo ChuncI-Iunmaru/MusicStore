@@ -48,7 +48,13 @@ public class RecommendationController {
 
     @GetMapping("/dummyUserRecs")
     public List<AlbumWrapper> getDummyUserRecommendations(@RequestParam("id") Long userId, @RequestParam("size") int size) {
-        System.out.println("Prośba o rekomendacje pearson on user dla userId=" + userId + ", rozmiar listy=" + size);
+        System.out.println("Prośba o rekomendacje spearman on user dla userId=" + userId + ", rozmiar listy=" + size);
         return recommendationService.getDummyUserRecs(userId, size);
+    }
+
+    @GetMapping("/recentBestsellers")
+    public List<AlbumWrapper> getRecentBestsellers(@RequestParam("size") int size) {
+        System.out.println("Prośba o bestsellery" + ", rozmiar listy=" + size);
+        return recommendationService.getBestsellers(size);
     }
 }

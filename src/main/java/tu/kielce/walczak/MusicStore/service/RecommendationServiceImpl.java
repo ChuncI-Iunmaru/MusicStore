@@ -21,8 +21,11 @@ import org.apache.mahout.cf.taste.similarity.UserSimilarity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import tu.kielce.walczak.MusicStore.dao.AlbumRepository;
+import tu.kielce.walczak.MusicStore.dao.OrderRepository;
 import tu.kielce.walczak.MusicStore.dto.AlbumWrapper;
 import tu.kielce.walczak.MusicStore.entity.Album;
+import tu.kielce.walczak.MusicStore.entity.Order;
+import tu.kielce.walczak.MusicStore.entity.OrderItem;
 
 import javax.annotation.PostConstruct;
 import java.util.*;
@@ -32,6 +35,7 @@ import java.util.stream.Collectors;
 public class RecommendationServiceImpl implements RecommendationService {
 
     private AlbumRepository albumRepository;
+    private OrderRepository orderRepository;
     private final Random random = new Random();
     private ItemBasedRecommender euclidGenresRecommender;
     private ItemBasedRecommender euclidSubgenresRecommender;
@@ -39,6 +43,12 @@ public class RecommendationServiceImpl implements RecommendationService {
     private ItemBasedRecommender cosineRecommender;
     private UserBasedRecommender userSpearmanRecommender;
     private DataModel model;
+
+    @Autowired
+    public RecommendationServiceImpl(AlbumRepository albumRepository, OrderRepository orderRepository) {
+        this.albumRepository = albumRepository;
+        this.orderRepository = orderRepository;
+    }
 
     @PostConstruct
     private void onInit() throws TasteException {
@@ -48,13 +58,12 @@ public class RecommendationServiceImpl implements RecommendationService {
         mixedRecommender = new GenericItemBasedRecommender(model, new MixedItemSimilarity());
         cosineRecommender = new GenericItemBasedRecommender(model, new CosineItemSimilarity());
 
-        //UserSimilarity similarity = new PearsonCorrelationSimilarity(model);
+        //UserSimilarity similarity = new PearsonCorrelationSimilarity(model); - pearson naprawdę nie chce działać z tak rzadkimi danymi
         UserSimilarity similarity = new SpearmanCorrelationSimilarity(model);
-        //UserNeighborhood neighborhood = new ThresholdUserNeighborhood(0.0001, similarity, model);
         UserNeighborhood neighborhood = new NearestNUserNeighborhood(10, similarity, model);
         for (int i = 1; i < 1000; i++) {
             if (neighborhood.getUserNeighborhood(i).length > 0) {
-                System.out.println("userId="+i+Arrays.toString(neighborhood.getUserNeighborhood(i)));
+                System.out.println("userId=" + i + Arrays.toString(neighborhood.getUserNeighborhood(i)));
             }
 
         }
@@ -137,11 +146,6 @@ public class RecommendationServiceImpl implements RecommendationService {
         }
     }
 
-    @Autowired
-    public RecommendationServiceImpl(AlbumRepository albumRepository) {
-        this.albumRepository = albumRepository;
-    }
-
     private List<AlbumWrapper> wrapRecommendations(List<RecommendedItem> recommendations) {
         List<AlbumWrapper> result = new ArrayList<>();
         for (RecommendedItem item : recommendations) {
@@ -216,8 +220,8 @@ public class RecommendationServiceImpl implements RecommendationService {
     public List<AlbumWrapper> getDummyUserRecs(Long userId, int size) {
         try {
             System.out.println("Przedmioty ocenione przez użytkownika:");
-            for(Preference pref : model.getPreferencesFromUser(userId)){
-                System.out.println("itemId="+pref.getItemID()+" , miara="+pref.getValue());
+            for (Preference pref : model.getPreferencesFromUser(userId)) {
+                System.out.println("itemId=" + pref.getItemID() + " , miara=" + pref.getValue());
             }
             List<RecommendedItem> recommendations = null;
             recommendations = userSpearmanRecommender.recommend(userId, size);
@@ -227,6 +231,38 @@ public class RecommendationServiceImpl implements RecommendationService {
             e.printStackTrace();
             return Collections.emptyList();
         }
+    }
+
+    @Override
+    public List<AlbumWrapper> getBestsellers(int size) {
+        // Pobierz wszystkie zamówienia złożone w ciągu zeszłego tygodnia
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DATE, -7);
+        List<Order> recentOrders = orderRepository.findAllByDateCreatedAfter(cal.getTime());
+        // Wyznacz dla każdego przedmiotu z nich liczbę kopii do id
+        Map<Long, Long> productAmounts = new HashMap<>();
+        for (Order o : recentOrders) {
+            for (OrderItem i : o.getOrderItems()) {
+                if (productAmounts.containsKey(i.getProductId())) {
+                    long val = productAmounts.get(i.getProductId());
+                    productAmounts.replace(i.getProductId(), val + i.getQuantity());
+                } else productAmounts.put(i.getProductId(), (long) i.getQuantity());
+            }
+        }
+        // Lista rozmiaru size posortowana według liczby kopii zamówionych
+        List<Long> mostBoughtProducts = productAmounts
+                .entrySet().stream()
+                .sorted(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .limit(size)
+                .collect(Collectors.toList());
+        // Opakuj każdą w album wrapper
+        List<AlbumWrapper> result = new ArrayList<>();
+        for (Long l : mostBoughtProducts) {
+            Album tmp = albumRepository.findById(l).get();
+            result.add(new AlbumWrapper(tmp, productAmounts.get(l)));
+        }
+        return result;
     }
 
     class GenreEuclidItemDistance implements ItemSimilarity {

@@ -12,4 +12,5 @@ public interface RecommendationService {
     List<AlbumWrapper> getMixedRecs(Long albumId, int size);
     List<AlbumWrapper> getCosineRecs(Long albumId, int size);
     List<AlbumWrapper> getDummyUserRecs(Long userId, int size);
+    List<AlbumWrapper> getBestsellers(int size);
 }

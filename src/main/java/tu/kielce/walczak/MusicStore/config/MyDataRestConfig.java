@@ -6,10 +6,7 @@ import org.springframework.data.rest.core.config.RepositoryRestConfiguration;
 import org.springframework.data.rest.webmvc.config.RepositoryRestConfigurer;
 import org.springframework.http.HttpMethod;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import tu.kielce.walczak.MusicStore.entity.Album;
-import tu.kielce.walczak.MusicStore.entity.Artist;
-import tu.kielce.walczak.MusicStore.entity.Genre;
-import tu.kielce.walczak.MusicStore.entity.Subgenre;
+import tu.kielce.walczak.MusicStore.entity.*;
 
 @Configuration
 public class MyDataRestConfig implements RepositoryRestConfigurer {
@@ -31,10 +28,16 @@ public class MyDataRestConfig implements RepositoryRestConfigurer {
                 .withItemExposure(((metdata, httpMethods) -> httpMethods.disable(unsupportedActions)))
                 .withCollectionExposure(((metdata, httpMethods) -> httpMethods.disable(unsupportedActions)));
 
+        config.getExposureConfiguration()
+                .forDomainType(Order.class)
+                .withItemExposure(((metdata, httpMethods) -> httpMethods.disable(unsupportedActions)))
+                .withCollectionExposure(((metdata, httpMethods) -> httpMethods.disable(unsupportedActions)));
+
         config.exposeIdsFor(Album.class);
         config.exposeIdsFor(Artist.class);
         config.exposeIdsFor(Genre.class);
         config.exposeIdsFor(Subgenre.class);
+        config.exposeIdsFor(Order.class);
 
         cors.addMapping(config.getBasePath() + "/**").allowedOrigins(allowedOrigins);
     }

@@ -2,7 +2,10 @@ package tu.kielce.walczak.MusicStore.service;
 
 import org.apache.mahout.cf.taste.common.Refreshable;
 import org.apache.mahout.cf.taste.common.TasteException;
+import org.apache.mahout.cf.taste.eval.RecommenderBuilder;
+import org.apache.mahout.cf.taste.eval.RecommenderEvaluator;
 import org.apache.mahout.cf.taste.impl.common.FastByIDMap;
+import org.apache.mahout.cf.taste.impl.eval.AverageAbsoluteDifferenceRecommenderEvaluator;
 import org.apache.mahout.cf.taste.impl.model.GenericDataModel;
 import org.apache.mahout.cf.taste.impl.model.GenericUserPreferenceArray;
 import org.apache.mahout.cf.taste.impl.neighborhood.NearestNUserNeighborhood;
@@ -15,6 +18,7 @@ import org.apache.mahout.cf.taste.model.PreferenceArray;
 import org.apache.mahout.cf.taste.neighborhood.UserNeighborhood;
 import org.apache.mahout.cf.taste.recommender.ItemBasedRecommender;
 import org.apache.mahout.cf.taste.recommender.RecommendedItem;
+import org.apache.mahout.cf.taste.recommender.Recommender;
 import org.apache.mahout.cf.taste.recommender.UserBasedRecommender;
 import org.apache.mahout.cf.taste.similarity.ItemSimilarity;
 import org.apache.mahout.cf.taste.similarity.UserSimilarity;
@@ -61,12 +65,12 @@ public class RecommendationServiceImpl implements RecommendationService {
         //UserSimilarity similarity = new PearsonCorrelationSimilarity(model); - pearson naprawdę nie chce działać z tak rzadkimi danymi
         UserSimilarity similarity = new SpearmanCorrelationSimilarity(model);
         UserNeighborhood neighborhood = new NearestNUserNeighborhood(10, similarity, model);
-        for (int i = 1; i < 1000; i++) {
-            if (neighborhood.getUserNeighborhood(i).length > 0) {
-                System.out.println("userId=" + i + Arrays.toString(neighborhood.getUserNeighborhood(i)));
-            }
-
-        }
+//        for (int i = 1; i < 10000; i++) {
+//            if (neighborhood.getUserNeighborhood(i).length > 0) {
+//                System.out.println("userId=" + i + Arrays.toString(neighborhood.getUserNeighborhood(i)));
+//            }
+//
+//        }
         userSpearmanRecommender = new GenericUserBasedRecommender(model, neighborhood, similarity);
     }
 
@@ -111,10 +115,11 @@ public class RecommendationServiceImpl implements RecommendationService {
             prefsForUser.setValue(index, 1.0f);
             index++;
         }
-        preferences.put(1L, prefsForUser);
+        // Wyłącz do testów
+        // preferences.put(1L, prefsForUser);
         // Add n of users with 1-10 random prefs with values 1-3
         long userId = 2;
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 10000; i++) {
             int prefSize = 1 + random.nextInt(10);
             PreferenceArray tmpPrefs = new GenericUserPreferenceArray(prefSize);
             tmpPrefs.setUserID(0, userId);
@@ -150,7 +155,7 @@ public class RecommendationServiceImpl implements RecommendationService {
         List<AlbumWrapper> result = new ArrayList<>();
         for (RecommendedItem item : recommendations) {
             Album recommended = albumRepository.findById(item.getItemID()).get();
-            System.out.println(recommended.getAlbumTitle() + " value: " + item.getValue());
+            //System.out.println(recommended.getAlbumTitle() + " value: " + item.getValue());
             result.add(new AlbumWrapper(recommended, item.getValue()));
         }
         return result;
@@ -265,6 +270,84 @@ public class RecommendationServiceImpl implements RecommendationService {
         return result;
     }
 
+    public Map<Long, Long> getCoverageAndVarietyMetricsForMode(int mode) {
+        if (mode == 1) {
+            System.out.println("Euclidean on genre");
+        } else if (mode == 2) {
+            System.out.println("Euclidean on subgenre");
+        } else if (mode == 3) {
+            System.out.println("Cosine on genre & subgenre");
+        } else if (mode == 4) {
+            System.out.println("Mixed recs");
+        }
+        // Pobierz wszystkie dostępne id albumów
+        List<Long> albumIds = albumRepository.findAll().stream().map(Album::getAlbumId).collect(Collectors.toList());
+        // Dla każdego algorytmu rekomendacji
+        Set<Long> cosineIds = new HashSet<>();
+        Map<Long, Double> sumValues = new HashMap<>();
+        Map<Long, Double> avgValues = new HashMap<>();
+        Map<Long, Double> minValues = new HashMap<>();
+        Map<Long, Double> maxValues = new HashMap<>();
+        Map<Long, Long> occurences = new HashMap<>();
+        System.out.println("Początek obliczania");
+        for (Long albumId : albumIds) {
+            //  Pobierz listę 5 elementów jak na produkcji
+            List<AlbumWrapper> result = null;
+            if (mode == 1) {
+                result = getEuclidGenreRecs(albumId, 5);
+            } else if (mode == 2) {
+                result = getEuclidSubgenreRecs(albumId, 5);
+            } else if (mode == 3) {
+                result = getCosineRecs(albumId, 5);
+            } else if (mode == 4) {
+                result = getMixedRecs(albumId, 5);
+            }
+            //  Dodaj do odpowiedniego setu id tych albumów
+            //  Zsumuj ich miary, pobierz max i min, oblicz średnią miar
+            //  dodaj to do map z id tego album
+            double min = -100, max = -100;
+            double sum = 0;
+            assert result != null;
+            for (AlbumWrapper wrapper : result) {
+                long wrapperId = wrapper.getAlbum().getAlbumId();
+                cosineIds.add(wrapperId);
+                if (occurences.containsKey(wrapperId)) {
+                    long val = occurences.get(wrapperId);
+                    occurences.replace(wrapperId, val + 1);
+                } else occurences.put(wrapperId, 1L);
+                if (wrapper.getSimilarityValue() < min) min = wrapper.getSimilarityValue();
+                if (wrapper.getSimilarityValue() > max) max = wrapper.getSimilarityValue();
+                sum += wrapper.getSimilarityValue();
+            }
+            sumValues.put(albumId, sum);
+            minValues.put(albumId, min);
+            maxValues.put(albumId, max);
+            avgValues.put(albumId, sum / 5);
+        }
+        //  Oblicz pokrycie
+        System.out.println("Obliczanie pokrycia");
+        double coverage = (double) cosineIds.size() / albumIds.size();
+        System.out.println("Pokrycie: " + coverage);
+        // Wypisz ile razy się pojawia dany
+        for (long albumId: albumIds) {
+            if (occurences.containsKey(albumId)){
+                System.out.println(albumId+","+occurences.get(albumId));
+            } else System.out.println(albumId+","+0);
+        }
+        return occurences;
+    }
+
+    public double getEvaluation(double trainingSplit, double usersSplit) {
+        RecommenderEvaluator evaluator = new AverageAbsoluteDifferenceRecommenderEvaluator();
+        RecommenderBuilder builder = new SpearmanRecommenderBuilder();
+        try {
+            return evaluator.evaluate(builder, null, model, trainingSplit, usersSplit);
+        } catch (TasteException e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
     class GenreEuclidItemDistance implements ItemSimilarity {
 
         @Override
@@ -374,6 +457,15 @@ public class RecommendationServiceImpl implements RecommendationService {
         @Override
         public void refresh(Collection<Refreshable> collection) {
 
+        }
+    }
+
+    public class SpearmanRecommenderBuilder implements RecommenderBuilder {
+        @Override
+        public Recommender buildRecommender(DataModel dataModel) throws TasteException {
+            UserSimilarity similarity = new SpearmanCorrelationSimilarity(model);
+            UserNeighborhood neighborhood = new NearestNUserNeighborhood(10, similarity, model);
+            return new GenericUserBasedRecommender(model, neighborhood, similarity);
         }
     }
 }

@@ -6,6 +6,7 @@ import tu.kielce.walczak.MusicStore.dto.AlbumWrapper;
 import tu.kielce.walczak.MusicStore.service.RecommendationService;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/rec")
@@ -56,5 +57,21 @@ public class RecommendationController {
     public List<AlbumWrapper> getRecentBestsellers(@RequestParam("size") int size) {
         System.out.println("Prośba o bestsellery" + ", rozmiar listy=" + size);
         return recommendationService.getBestsellers(size);
+    }
+
+    @GetMapping("/metrics")
+    public void getMetrics() {
+        Map<Long, Long> resultEuclid = recommendationService.getCoverageAndVarietyMetricsForMode(1);
+        //recommendationService.getCoverageAndVarietyMetricsForMode(2);
+        Map<Long, Long> resultCosine =recommendationService.getCoverageAndVarietyMetricsForMode(3);
+        //recommendationService.getCoverageAndVarietyMetricsForMode(4);
+    }
+
+    @GetMapping("/evaluation")
+    public void getEvaluation() {
+        System.out.println("Dla 100 użytkowników (1%): " + recommendationService.getEvaluation(0.8, 0.01));
+        System.out.println("Dla 1000 użytkowników (10%): " + recommendationService.getEvaluation(0.8, 0.1));
+        System.out.println("Dla 5000 użytkowników (50%): " + recommendationService.getEvaluation(0.8, 0.5));
+        System.out.println("Dla 10000 użytkowników (100%): " + recommendationService.getEvaluation(0.8, 1.0));
     }
 }

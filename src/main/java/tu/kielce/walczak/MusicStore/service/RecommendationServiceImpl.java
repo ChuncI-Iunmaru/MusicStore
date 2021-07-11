@@ -5,6 +5,7 @@ import org.apache.mahout.cf.taste.common.TasteException;
 import org.apache.mahout.cf.taste.eval.RecommenderBuilder;
 import org.apache.mahout.cf.taste.eval.RecommenderEvaluator;
 import org.apache.mahout.cf.taste.impl.common.FastByIDMap;
+import org.apache.mahout.cf.taste.impl.common.FastMap;
 import org.apache.mahout.cf.taste.impl.eval.AverageAbsoluteDifferenceRecommenderEvaluator;
 import org.apache.mahout.cf.taste.impl.model.GenericDataModel;
 import org.apache.mahout.cf.taste.impl.model.GenericUserPreferenceArray;
@@ -22,8 +23,13 @@ import org.apache.mahout.cf.taste.recommender.Recommender;
 import org.apache.mahout.cf.taste.recommender.UserBasedRecommender;
 import org.apache.mahout.cf.taste.similarity.ItemSimilarity;
 import org.apache.mahout.cf.taste.similarity.UserSimilarity;
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tu.kielce.walczak.MusicStore.dao.AlbumRepository;
 import tu.kielce.walczak.MusicStore.dao.OrderRepository;
 import tu.kielce.walczak.MusicStore.dto.AlbumWrapper;
@@ -47,6 +53,8 @@ public class RecommendationServiceImpl implements RecommendationService {
     private ItemBasedRecommender cosineRecommender;
     private UserBasedRecommender userSpearmanRecommender;
     private DataModel model;
+
+    private Map<Long, Album> fastMapAlbums = new FastMap<>();
 
     @Autowired
     public RecommendationServiceImpl(AlbumRepository albumRepository, OrderRepository orderRepository) {
@@ -72,6 +80,19 @@ public class RecommendationServiceImpl implements RecommendationService {
 //
 //        }
         userSpearmanRecommender = new GenericUserBasedRecommender(model, neighborhood, similarity);
+    }
+
+    // To musi być odpalone po @PostConstruct - najlepiej przy requescie, inaczej nie działa prawidłowo lazy init - musi być sesja hibernate
+    @Transactional
+    public void fillFastMapFromDB() {
+        List<Long> allIds = albumRepository.findAll().stream().map(Album::getAlbumId).collect(Collectors.toList());
+        for (Long id : allIds){
+            Album a = albumRepository.findById(id).get();
+            System.out.print("Dodawanie albumu "+a.getAlbumTitle()+": ");
+            System.out.print(a.getGenres()+"; ");
+            System.out.println(a.getSubgenres());
+            fastMapAlbums.put(a.getAlbumId(), a);
+        }
     }
 
     private DataModel getDummyPreferences() {
@@ -352,10 +373,11 @@ public class RecommendationServiceImpl implements RecommendationService {
 
         @Override
         public double itemSimilarity(long l, long l1) throws TasteException {
-            Album first = albumRepository.findById(l).get();
-            Album second = albumRepository.findById(l1).get();
-            // Tutaj zmiana znaku, bo te o najmniejszym dystansie są najbardziej podobne
-            return -first.getEuclidDistGenres(second);
+//            Album first = albumRepository.findById(l).get();
+//            Album second = albumRepository.findById(l1).get();
+//            // Tutaj zmiana znaku, bo te o najmniejszym dystansie są najbardziej podobne
+//            return -first.getEuclidDistGenres(second);
+            return fastMapAlbums.get(l).getEuclidDistGenres(fastMapAlbums.get(l1));
         }
 
         @Override
@@ -377,10 +399,11 @@ public class RecommendationServiceImpl implements RecommendationService {
     class SubgenreEuclidItemDistance implements ItemSimilarity {
         @Override
         public double itemSimilarity(long l, long l1) throws TasteException {
-            Album first = albumRepository.findById(l).get();
-            Album second = albumRepository.findById(l1).get();
-            // Tutaj zmiana znaku, bo te o najmniejszym dystansie są najbardziej podobne
-            return -first.getEuclidDistSubgenres(second);
+//            Album first = albumRepository.findById(l).get();
+//            Album second = albumRepository.findById(l1).get();
+//            // Tutaj zmiana znaku, bo te o najmniejszym dystansie są najbardziej podobne
+//            return -first.getEuclidDistSubgenres(second);
+            return fastMapAlbums.get(l).getEuclidDistSubgenres(fastMapAlbums.get(l1));
         }
 
         @Override
@@ -402,8 +425,10 @@ public class RecommendationServiceImpl implements RecommendationService {
     class MixedItemSimilarity implements ItemSimilarity {
         @Override
         public double itemSimilarity(long l, long l1) throws TasteException {
-            Album first = albumRepository.findById(l).get();
-            Album second = albumRepository.findById(l1).get();
+//            Album first = albumRepository.findById(l).get();
+//            Album second = albumRepository.findById(l1).get();
+            Album first = fastMapAlbums.get(l);
+            Album second = fastMapAlbums.get(l1);
             double similarity = 0.0;
             if (first.getArtist().getArtistId().compareTo(second.getArtist().getArtistId()) == 0) {
                 similarity += 5;
@@ -438,8 +463,10 @@ public class RecommendationServiceImpl implements RecommendationService {
     class CosineItemSimilarity implements ItemSimilarity {
         @Override
         public double itemSimilarity(long l, long l1) throws TasteException {
-            Album first = albumRepository.findById(l).get();
-            Album second = albumRepository.findById(l1).get();
+//            Album first = albumRepository.findById(l).get();
+//            Album second = albumRepository.findById(l1).get();
+            Album first = fastMapAlbums.get(l);
+            Album second = fastMapAlbums.get(l1);
             // Obie z taką samą wagą
             return 0.5 * first.getCosineGenres(second) + 0.5 * first.getCosineSubgenres(second);
         }

@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.*;
 import tu.kielce.walczak.MusicStore.dto.AlbumWrapper;
 import tu.kielce.walczak.MusicStore.service.RecommendationService;
 
+import javax.annotation.PostConstruct;
 import java.util.List;
 import java.util.Map;
 
@@ -16,6 +17,11 @@ public class RecommendationController {
     @Autowired
     public RecommendationController(RecommendationService recommendationService) {
         this.recommendationService = recommendationService;
+    }
+
+    @PostConstruct
+    public void init(){
+        this.recommendationService.fillFastMapFromDB();
     }
 
     @GetMapping("/testRecommendations")

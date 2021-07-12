@@ -33,6 +33,16 @@ public class MyDataRestConfig implements RepositoryRestConfigurer {
                 .withItemExposure(((metdata, httpMethods) -> httpMethods.disable(unsupportedActions)))
                 .withCollectionExposure(((metdata, httpMethods) -> httpMethods.disable(unsupportedActions)));
 
+        config.getExposureConfiguration()
+                .forDomainType(Genre.class)
+                .withItemExposure(((metdata, httpMethods) -> httpMethods.disable(unsupportedActions)))
+                .withCollectionExposure(((metdata, httpMethods) -> httpMethods.disable(unsupportedActions)));
+
+        config.getExposureConfiguration()
+                .forDomainType(Subgenre.class)
+                .withItemExposure(((metdata, httpMethods) -> httpMethods.disable(unsupportedActions)))
+                .withCollectionExposure(((metdata, httpMethods) -> httpMethods.disable(unsupportedActions)));
+
         config.exposeIdsFor(Album.class);
         config.exposeIdsFor(Artist.class);
         config.exposeIdsFor(Genre.class);

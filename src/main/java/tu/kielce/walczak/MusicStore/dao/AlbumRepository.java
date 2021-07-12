@@ -9,9 +9,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import tu.kielce.walczak.MusicStore.entity.Album;
 
 import java.util.List;
+import java.util.Optional;
 
 @RepositoryRestResource
 public interface AlbumRepository extends JpaRepository<Album, Long> {
     Page<Album> findByAlbumTitleContaining(@RequestParam("title") String title, Pageable pageable);
-
+    Optional<Album> findAlbumByAlbumTitle(String title);
 }

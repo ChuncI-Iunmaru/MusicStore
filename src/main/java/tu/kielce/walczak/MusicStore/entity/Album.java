@@ -35,6 +35,9 @@ public class Album {
     @Column(name = "albumPrice")
     private double albumPrice;
 
+    @Column(name = "imageUrl")
+    private String imageUrl;
+
     @ManyToMany(targetEntity = Genre.class, cascade = { CascadeType.ALL })
     @JoinTable(name = "genre_to_album",
             joinColumns = { @JoinColumn(name = "albumId") },

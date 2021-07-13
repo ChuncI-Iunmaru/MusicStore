@@ -1,10 +1,7 @@
 package tu.kielce.walczak.MusicStore.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import tu.kielce.walczak.MusicStore.dto.AlbumDto;
 import tu.kielce.walczak.MusicStore.service.AlbumCRUDService;
 
@@ -21,5 +18,15 @@ public class AlbumCRUDController {
     @PostMapping("/create")
     public long addAlbum(@RequestBody AlbumDto dto){
         return service.addAlbum(dto);
+    }
+
+    @DeleteMapping("/delete")
+    public long deleteAlbum(@RequestParam("id") Long albumId){
+        return service.deleteAlbum(albumId);
+    }
+
+    @PostMapping("/update")
+    public long updateAlbum(@RequestBody AlbumDto dto) {
+        return service.updateAlbum(dto);
     }
 }

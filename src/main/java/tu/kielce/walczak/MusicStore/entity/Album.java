@@ -38,13 +38,23 @@ public class Album {
     @Column(name = "imageUrl")
     private String imageUrl;
 
-    @ManyToMany(targetEntity = Genre.class, cascade = { CascadeType.ALL })
+    @ManyToMany(targetEntity = Genre.class, cascade = {
+            CascadeType.DETACH,
+            CascadeType.MERGE,
+            CascadeType.REFRESH,
+            CascadeType.PERSIST
+    })
     @JoinTable(name = "genre_to_album",
             joinColumns = { @JoinColumn(name = "albumId") },
             inverseJoinColumns = { @JoinColumn(name = "genreId") })
     private List<Genre> genres;
 
-    @ManyToMany(targetEntity = Subgenre.class, cascade = { CascadeType.ALL })
+    @ManyToMany(targetEntity = Subgenre.class, cascade = {
+            CascadeType.DETACH,
+            CascadeType.MERGE,
+            CascadeType.REFRESH,
+            CascadeType.PERSIST
+    })
     @JoinTable(name = "subgenre_to_album",
             joinColumns = { @JoinColumn(name = "albumId") },
             inverseJoinColumns = { @JoinColumn(name = "subgenreId") })

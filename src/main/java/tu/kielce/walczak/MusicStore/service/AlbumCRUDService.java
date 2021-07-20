@@ -16,6 +16,7 @@ import tu.kielce.walczak.MusicStore.entity.Subgenre;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class AlbumCRUDService {
@@ -106,5 +107,15 @@ public class AlbumCRUDService {
         Album updatedAlbum = makeAlbumFromDTO(dto);
         updatedAlbum.setAlbumId(existing.getAlbumId());
         return albumRepository.save(updatedAlbum).getAlbumId();
+    }
+
+    public List<String> getAllGenreNames() {
+        List<Genre> genres = genreRepository.findAll();
+        return genres.stream().map(Genre::getGenreName).collect(Collectors.toList());
+    }
+
+    public List<String> getAllSubgenreNames() {
+        List<Subgenre> genres = subgenreRepository.findAll();
+        return genres.stream().map(Subgenre::getSubgenreName).collect(Collectors.toList());
     }
 }

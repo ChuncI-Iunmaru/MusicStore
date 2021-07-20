@@ -5,6 +5,8 @@ import org.springframework.web.bind.annotation.*;
 import tu.kielce.walczak.MusicStore.dto.AlbumDto;
 import tu.kielce.walczak.MusicStore.service.AlbumCRUDService;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/crud/album")
 public class AlbumCRUDController {
@@ -28,5 +30,15 @@ public class AlbumCRUDController {
     @PostMapping("/update")
     public long updateAlbum(@RequestBody AlbumDto dto) {
         return service.updateAlbum(dto);
+    }
+
+    @GetMapping("/genreNames")
+    public List<String> getAllGenreNames() {
+        return service.getAllGenreNames();
+    }
+
+    @GetMapping("/subgenreNames")
+    public List<String> getAllSubgenreNames() {
+        return service.getAllSubgenreNames();
     }
 }

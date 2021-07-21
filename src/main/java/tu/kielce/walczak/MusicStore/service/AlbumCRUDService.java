@@ -58,9 +58,9 @@ public class AlbumCRUDService {
         }
         newAlbum.setSubgenres(subgenreList);
         //Add rest of the info
-        newAlbum.setAlbumTitle(dto.getTitle());
-        newAlbum.setAlbumYear(dto.getYear());
-        newAlbum.setAlbumPrice(dto.getPrice());
+        newAlbum.setAlbumTitle(dto.getAlbumTitle());
+        newAlbum.setAlbumYear(dto.getAlbumYear());
+        newAlbum.setAlbumPrice(dto.getAlbumPrice());
         newAlbum.setImageUrl(dto.getImageUrl());
         return newAlbum;
     }
@@ -68,7 +68,7 @@ public class AlbumCRUDService {
     // Add album from album dto
     public long addAlbum(AlbumDto dto){
         //Check if exists
-        Album existing = albumRepository.findAlbumByAlbumTitle(dto.getTitle()).orElse(null);
+        Album existing = albumRepository.findAlbumByAlbumTitle(dto.getAlbumTitle()).orElse(null);
         if (existing != null) {
             return -1;
         }
@@ -100,7 +100,7 @@ public class AlbumCRUDService {
     // Update album from album DAO
     public long updateAlbum(AlbumDto dto){
         //Check if exists
-        Album existing = albumRepository.findById(dto.getId()).orElse(null);
+        Album existing = albumRepository.findById(dto.getAlbumId()).orElse(null);
         if (existing == null) {
             return -1;
         }
@@ -117,5 +117,13 @@ public class AlbumCRUDService {
     public List<String> getAllSubgenreNames() {
         List<Subgenre> genres = subgenreRepository.findAll();
         return genres.stream().map(Subgenre::getSubgenreName).collect(Collectors.toList());
+    }
+
+    public String artistNameForAlbum(long id) {
+        // Tu zawsze będzie istniejący album, bo wybrany z listy pobranej z bazy
+        Album result = albumRepository.findById(id).get();
+        String name = result.getArtist().getArtistName();
+        System.out.println(name);
+        return name;
     }
 }

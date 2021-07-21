@@ -88,9 +88,9 @@ public class RecommendationServiceImpl implements RecommendationService {
         List<Long> allIds = albumRepository.findAll().stream().map(Album::getAlbumId).collect(Collectors.toList());
         for (Long id : allIds){
             Album a = albumRepository.findById(id).get();
-            System.out.print("Dodawanie albumu "+a.getAlbumTitle()+": ");
-            System.out.print(a.getGenres()+"; ");
-            System.out.println(a.getSubgenres());
+//            System.out.print("Dodawanie albumu "+a.getAlbumTitle()+": ");
+//            System.out.print(a.getGenres()+"; ");
+//            System.out.println(a.getSubgenres());
             fastMapAlbums.put(a.getAlbumId(), a);
         }
     }

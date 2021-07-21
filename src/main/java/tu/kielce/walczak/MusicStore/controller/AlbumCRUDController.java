@@ -30,6 +30,7 @@ public class AlbumCRUDController {
 
     @DeleteMapping("/delete")
     public long deleteAlbum(@RequestParam("id") Long albumId){
+        System.out.println("request usunięcia albumu " + albumId);
         long id = service.deleteAlbum(albumId);
         recommendationService.fillFastMapFromDB();
         return id;

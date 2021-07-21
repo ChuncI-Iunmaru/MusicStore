@@ -47,13 +47,13 @@ public class AlbumCRUDService {
         newAlbum.setArtist(artist);
         //Find genres
         List<Genre> genreList = new ArrayList<>();
-        for (String s: dto.getGenres()){
+        for (String s: dto.getGenres().stream().distinct().collect(Collectors.toList())){
             genreList.add(genreRepository.findGenreByGenreName(s));
         }
         newAlbum.setGenres(genreList);
         //Find subgenres
         List<Subgenre> subgenreList = new ArrayList<>();
-        for (String s: dto.getSubgenres()){
+        for (String s: dto.getSubgenres().stream().distinct().collect(Collectors.toList())){
             subgenreList.add(subgenreRepository.findSubgenreBySubgenreName(s));
         }
         newAlbum.setSubgenres(subgenreList);

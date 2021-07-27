@@ -24,5 +24,5 @@ public interface RecommendationService {
     Map<Long, Long> getCoverageAndVarietyMetricsForMode(int mode);
 
     double getEvaluation(double trainingSplit, double usersSplit);
-    void fillFastMapFromDB();
+    void fillDataFromDB();
 }

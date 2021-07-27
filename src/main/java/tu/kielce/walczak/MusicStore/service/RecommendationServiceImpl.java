@@ -31,9 +31,11 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tu.kielce.walczak.MusicStore.dao.AlbumRepository;
+import tu.kielce.walczak.MusicStore.dao.CustomerRepository;
 import tu.kielce.walczak.MusicStore.dao.OrderRepository;
 import tu.kielce.walczak.MusicStore.dto.AlbumWrapper;
 import tu.kielce.walczak.MusicStore.entity.Album;
+import tu.kielce.walczak.MusicStore.entity.Customer;
 import tu.kielce.walczak.MusicStore.entity.Order;
 import tu.kielce.walczak.MusicStore.entity.OrderItem;
 
@@ -46,6 +48,7 @@ public class RecommendationServiceImpl implements RecommendationService {
 
     private AlbumRepository albumRepository;
     private OrderRepository orderRepository;
+    private CustomerRepository customerRepository;
     private final Random random = new Random();
     private ItemBasedRecommender euclidGenresRecommender;
     private ItemBasedRecommender euclidSubgenresRecommender;
@@ -57,42 +60,44 @@ public class RecommendationServiceImpl implements RecommendationService {
     private Map<Long, Album> fastMapAlbums = new FastMap<>();
 
     @Autowired
-    public RecommendationServiceImpl(AlbumRepository albumRepository, OrderRepository orderRepository) {
+    public RecommendationServiceImpl(AlbumRepository albumRepository, OrderRepository orderRepository, CustomerRepository customerRepository) {
         this.albumRepository = albumRepository;
         this.orderRepository = orderRepository;
-    }
-
-    @PostConstruct
-    private void onInit() throws TasteException {
-        this.model = getRandomPreferences();
-        euclidGenresRecommender = new GenericItemBasedRecommender(model, new GenreEuclidItemDistance());
-        euclidSubgenresRecommender = new GenericItemBasedRecommender(model, new SubgenreEuclidItemDistance());
-        mixedRecommender = new GenericItemBasedRecommender(model, new MixedItemSimilarity());
-        cosineRecommender = new GenericItemBasedRecommender(model, new CosineItemSimilarity());
-
-        //UserSimilarity similarity = new PearsonCorrelationSimilarity(model); - pearson naprawdę nie chce działać z tak rzadkimi danymi
-        UserSimilarity similarity = new SpearmanCorrelationSimilarity(model);
-        UserNeighborhood neighborhood = new NearestNUserNeighborhood(10, similarity, model);
-//        for (int i = 1; i < 10000; i++) {
-//            if (neighborhood.getUserNeighborhood(i).length > 0) {
-//                System.out.println("userId=" + i + Arrays.toString(neighborhood.getUserNeighborhood(i)));
-//            }
-//
-//        }
-        userSpearmanRecommender = new GenericUserBasedRecommender(model, neighborhood, similarity);
+        this.customerRepository = customerRepository;
     }
 
     // To musi być odpalone po @PostConstruct - najlepiej przy requescie, inaczej nie działa prawidłowo lazy init - musi być sesja hibernate
     @Transactional
-    public void fillFastMapFromDB() {
+    public void fillDataFromDB() {
         List<Long> allIds = albumRepository.findAll().stream().map(Album::getAlbumId).collect(Collectors.toList());
-        for (Long id : allIds){
+        for (Long id : allIds) {
             Album a = albumRepository.findById(id).get();
 //            System.out.print("Dodawanie albumu "+a.getAlbumTitle()+": ");
 //            System.out.print(a.getGenres()+"; ");
 //            System.out.println(a.getSubgenres());
             fastMapAlbums.put(a.getAlbumId(), a);
         }
+        this.model = fillPreferencesFromDB();
+        // Później przenieść tu tworzenie rekomenerów z tego nowego modelu - one i tak wymagają pełnej fast map do działania
+        try {
+            euclidGenresRecommender = new GenericItemBasedRecommender(model, new GenreEuclidItemDistance(fastMapAlbums));
+            euclidSubgenresRecommender = new GenericItemBasedRecommender(model, new SubgenreEuclidItemDistance());
+            mixedRecommender = new GenericItemBasedRecommender(model, new MixedItemSimilarity());
+            cosineRecommender = new GenericItemBasedRecommender(model, new CosineItemSimilarity());
+
+            UserSimilarity similarity = new SpearmanCorrelationSimilarity(model);
+            UserNeighborhood neighborhood = null;
+            neighborhood = new NearestNUserNeighborhood(2500, similarity, model);
+//            for (int i = 1; i < 10; i++) {
+//                if (neighborhood.getUserNeighborhood(i).length > 0) {
+//                    System.out.println("userId=" + i + Arrays.toString(neighborhood.getUserNeighborhood(i)));
+//                }
+//            }
+            userSpearmanRecommender = new GenericUserBasedRecommender(model, neighborhood, similarity);
+        } catch (TasteException e) {
+            e.printStackTrace();
+        }
+
     }
 
     private DataModel getDummyPreferences() {
@@ -155,10 +160,62 @@ public class RecommendationServiceImpl implements RecommendationService {
         return model;
     }
 
+    private DataModel fillPreferencesFromDB() {
+        List<Long> albumIds = albumRepository.findAll().stream().map(Album::getAlbumId).collect(Collectors.toList());
+        FastByIDMap<PreferenceArray> preferences = new FastByIDMap<>();
+        PreferenceArray prefsForUser = new GenericUserPreferenceArray(albumIds.size());
+        prefsForUser.setUserID(0, 1L);
+        int index = 0;
+        for (Long id : albumIds) {
+            prefsForUser.setItemID(index, id);
+            prefsForUser.setValue(index, 1.0f);
+            index++;
+        }
+        preferences.put(1L, prefsForUser);
+
+        // Dla każdego klienta
+        // Pobierz customer po ID z bazy danych
+        List<Customer> allCustomers = customerRepository.findAll();
+        for (Customer c : allCustomers) {
+            // Pobierz dla niego listę zamówień
+            List<Order> customersOrders = orderRepository.findAllByCustomer(c);
+            // Dla każdego zamówienia pobierz order item, połącz je w jedną listę
+            // Usuń duplikaty zwiększając odpowiednie quantity
+            Map<Long, Integer> productIdToQuantity = new HashMap<>();
+            for (Order o : customersOrders) {
+                for (OrderItem i : o.getOrderItems()) {
+                    if (productIdToQuantity.containsKey(i.getProductId())) {
+                        int oldQuantity = productIdToQuantity.get(i.getProductId());
+                        productIdToQuantity.replace(i.getProductId(), oldQuantity + i.getQuantity());
+//                        System.out.println("Zmiana {"+i.getProductId() +", "+oldQuantity+i.getQuantity()+"}");
+                    } else {
+                        productIdToQuantity.put(i.getProductId(), i.getQuantity());
+//                        System.out.println("Dodawanie {"+i.getProductId() +", "+i.getQuantity()+"}");
+                    }
+                }
+            }
+            // Dodaj każdy order item do prefs array z value równą quantity
+            PreferenceArray tmpPrefs = new GenericUserPreferenceArray(productIdToQuantity.entrySet().size());
+            tmpPrefs.setUserID(0, c.getId());
+            int tmpIndex = 0;
+            for (Long pid : productIdToQuantity.keySet()) {
+                tmpPrefs.setItemID(tmpIndex, pid);
+                tmpPrefs.setValue(tmpIndex, productIdToQuantity.get(pid));
+                tmpIndex++;
+            }
+            preferences.put(c.getId(), tmpPrefs);
+//            System.out.println("Dodawanie preferencji " + tmpPrefs);
+        }
+
+
+        DataModel model = new GenericDataModel(preferences);
+        return model;
+    }
+
     public void getDummyItemBasedRecs() throws TasteException {
         DataModel model = getDummyPreferences();
         //ItemSimilarity itemSimilarity = new PearsonCorrelationSimilarity(model);
-        ItemSimilarity itemSimilarity = new GenreEuclidItemDistance();
+        ItemSimilarity itemSimilarity = new GenreEuclidItemDistance(fastMapAlbums);
 
         ItemBasedRecommender recommender = new GenericItemBasedRecommender(model, itemSimilarity);
         long albumId = 2L;
@@ -350,10 +407,10 @@ public class RecommendationServiceImpl implements RecommendationService {
         double coverage = (double) cosineIds.size() / albumIds.size();
         System.out.println("Pokrycie: " + coverage);
         // Wypisz ile razy się pojawia dany
-        for (long albumId: albumIds) {
-            if (occurences.containsKey(albumId)){
-                System.out.println(albumId+","+occurences.get(albumId));
-            } else System.out.println(albumId+","+0);
+        for (long albumId : albumIds) {
+            if (occurences.containsKey(albumId)) {
+                System.out.println(albumId + "," + occurences.get(albumId));
+            } else System.out.println(albumId + "," + 0);
         }
         return occurences;
     }
@@ -371,13 +428,19 @@ public class RecommendationServiceImpl implements RecommendationService {
 
     class GenreEuclidItemDistance implements ItemSimilarity {
 
+        private final Map<Long, Album> fastMapAlbums;
+
+        public GenreEuclidItemDistance(Map<Long, Album> fastMapAlbums) {
+            this.fastMapAlbums = fastMapAlbums;
+        }
+
         @Override
         public double itemSimilarity(long l, long l1) throws TasteException {
 //            Album first = albumRepository.findById(l).get();
 //            Album second = albumRepository.findById(l1).get();
 //            // Tutaj zmiana znaku, bo te o najmniejszym dystansie są najbardziej podobne
 //            return -first.getEuclidDistGenres(second);
-            return fastMapAlbums.get(l).getEuclidDistGenres(fastMapAlbums.get(l1));
+            return this.fastMapAlbums.get(l).getEuclidDistGenres(this.fastMapAlbums.get(l1));
         }
 
         @Override

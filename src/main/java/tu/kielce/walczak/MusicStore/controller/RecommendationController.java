@@ -21,7 +21,7 @@ public class RecommendationController {
 
     @PostConstruct
     public void init(){
-        this.recommendationService.fillFastMapFromDB();
+        this.recommendationService.fillDataFromDB();
     }
 
     @GetMapping("/testRecommendations")

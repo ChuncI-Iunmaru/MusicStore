@@ -24,7 +24,7 @@ public class AlbumCRUDController {
     public long addAlbum(@RequestBody AlbumDto dto){
         System.out.println("Request dodania albumu " + dto);
         long id = service.addAlbum(dto);
-        recommendationService.fillFastMapFromDB();
+        recommendationService.fillDataFromDB();
         return id;
     }
 
@@ -32,7 +32,7 @@ public class AlbumCRUDController {
     public long deleteAlbum(@RequestParam("id") Long albumId){
         System.out.println("request usunięcia albumu " + albumId);
         long id = service.deleteAlbum(albumId);
-        recommendationService.fillFastMapFromDB();
+        recommendationService.fillDataFromDB();
         return id;
     }
 
@@ -40,7 +40,7 @@ public class AlbumCRUDController {
     public long updateAlbum(@RequestBody AlbumDto dto) {
         System.out.println("Request aktualizacji albumu " + dto);
         long id = service.updateAlbum(dto);
-        recommendationService.fillFastMapFromDB();
+        recommendationService.fillDataFromDB();
         return id;
     }
 

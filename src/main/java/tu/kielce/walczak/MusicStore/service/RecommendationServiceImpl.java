@@ -1,6 +1,5 @@
 package tu.kielce.walczak.MusicStore.service;
 
-import org.apache.mahout.cf.taste.common.Refreshable;
 import org.apache.mahout.cf.taste.common.TasteException;
 import org.apache.mahout.cf.taste.eval.RecommenderBuilder;
 import org.apache.mahout.cf.taste.eval.RecommenderEvaluator;
@@ -23,11 +22,7 @@ import org.apache.mahout.cf.taste.recommender.Recommender;
 import org.apache.mahout.cf.taste.recommender.UserBasedRecommender;
 import org.apache.mahout.cf.taste.similarity.ItemSimilarity;
 import org.apache.mahout.cf.taste.similarity.UserSimilarity;
-import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tu.kielce.walczak.MusicStore.dao.AlbumRepository;
@@ -38,8 +33,11 @@ import tu.kielce.walczak.MusicStore.entity.Album;
 import tu.kielce.walczak.MusicStore.entity.Customer;
 import tu.kielce.walczak.MusicStore.entity.Order;
 import tu.kielce.walczak.MusicStore.entity.OrderItem;
+import tu.kielce.walczak.MusicStore.recommenders.CosineItemSimilarity;
+import tu.kielce.walczak.MusicStore.recommenders.GenreEuclidItemDistance;
+import tu.kielce.walczak.MusicStore.recommenders.MixedItemSimilarity;
+import tu.kielce.walczak.MusicStore.recommenders.SubgenreEuclidItemDistance;
 
-import javax.annotation.PostConstruct;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -72,18 +70,23 @@ public class RecommendationServiceImpl implements RecommendationService {
         List<Long> allIds = albumRepository.findAll().stream().map(Album::getAlbumId).collect(Collectors.toList());
         for (Long id : allIds) {
             Album a = albumRepository.findById(id).get();
-//            System.out.print("Dodawanie albumu "+a.getAlbumTitle()+": ");
-//            System.out.print(a.getGenres()+"; ");
-//            System.out.println(a.getSubgenres());
+            // !!!Bez tego wypisywania do wrzuca do kolekcji albumy z niezaincijalizowanym genre/subgenre
+            System.out.print("Dodawanie albumu "+a.getAlbumTitle()+": ");
+            System.out.print(a.getGenres()+"; ");
+            System.out.println(a.getSubgenres());
             fastMapAlbums.put(a.getAlbumId(), a);
         }
         this.model = fillPreferencesFromDB();
         // Później przenieść tu tworzenie rekomenerów z tego nowego modelu - one i tak wymagają pełnej fast map do działania
+        createRecommenders();
+    }
+
+    private void createRecommenders(){
         try {
             euclidGenresRecommender = new GenericItemBasedRecommender(model, new GenreEuclidItemDistance(fastMapAlbums));
-            euclidSubgenresRecommender = new GenericItemBasedRecommender(model, new SubgenreEuclidItemDistance());
-            mixedRecommender = new GenericItemBasedRecommender(model, new MixedItemSimilarity());
-            cosineRecommender = new GenericItemBasedRecommender(model, new CosineItemSimilarity());
+            euclidSubgenresRecommender = new GenericItemBasedRecommender(model, new SubgenreEuclidItemDistance(fastMapAlbums));
+            mixedRecommender = new GenericItemBasedRecommender(model, new MixedItemSimilarity(fastMapAlbums));
+            cosineRecommender = new GenericItemBasedRecommender(model, new CosineItemSimilarity(fastMapAlbums));
 
             UserSimilarity similarity = new SpearmanCorrelationSimilarity(model);
             UserNeighborhood neighborhood = null;
@@ -97,7 +100,6 @@ public class RecommendationServiceImpl implements RecommendationService {
         } catch (TasteException e) {
             e.printStackTrace();
         }
-
     }
 
     private DataModel getDummyPreferences() {
@@ -129,37 +131,6 @@ public class RecommendationServiceImpl implements RecommendationService {
         return new GenericDataModel(preferences);
     }
 
-    private DataModel getRandomPreferences() {
-        // Same as above
-        List<Long> albumIds = albumRepository.findAll().stream().map(Album::getAlbumId).collect(Collectors.toList());
-        FastByIDMap<PreferenceArray> preferences = new FastByIDMap<>();
-        PreferenceArray prefsForUser = new GenericUserPreferenceArray(albumIds.size());
-        prefsForUser.setUserID(0, 1L);
-        int index = 0;
-        for (Long id : albumIds) {
-            prefsForUser.setItemID(index, id);
-            prefsForUser.setValue(index, 1.0f);
-            index++;
-        }
-        // Wyłącz do testów
-        // preferences.put(1L, prefsForUser);
-        // Add n of users with 1-10 random prefs with values 1-3
-        long userId = 2;
-        for (int i = 0; i < 10000; i++) {
-            int prefSize = 1 + random.nextInt(10);
-            PreferenceArray tmpPrefs = new GenericUserPreferenceArray(prefSize);
-            tmpPrefs.setUserID(0, userId);
-            for (int j = 0; j < prefSize; j++) {
-                tmpPrefs.setItemID(j, albumIds.get(random.nextInt(albumIds.size())));
-                tmpPrefs.setValue(j, 1 + random.nextInt(3));
-            }
-            preferences.put(userId, tmpPrefs);
-            userId++;
-        }
-        DataModel model = new GenericDataModel(preferences);
-        return model;
-    }
-
     private DataModel fillPreferencesFromDB() {
         List<Long> albumIds = albumRepository.findAll().stream().map(Album::getAlbumId).collect(Collectors.toList());
         FastByIDMap<PreferenceArray> preferences = new FastByIDMap<>();
@@ -176,7 +147,8 @@ public class RecommendationServiceImpl implements RecommendationService {
         // Dla każdego klienta
         // Pobierz customer po ID z bazy danych
         List<Customer> allCustomers = customerRepository.findAll();
-        for (Customer c : allCustomers) {
+        // Tymczasowy limit dla szybszego restartu
+        for (Customer c : allCustomers.stream().limit(10).collect(Collectors.toList())) {
             // Pobierz dla niego listę zamówień
             List<Order> customersOrders = orderRepository.findAllByCustomer(c);
             // Dla każdego zamówienia pobierz order item, połącz je w jedną listę
@@ -206,7 +178,6 @@ public class RecommendationServiceImpl implements RecommendationService {
             preferences.put(c.getId(), tmpPrefs);
 //            System.out.println("Dodawanie preferencji " + tmpPrefs);
         }
-
 
         DataModel model = new GenericDataModel(preferences);
         return model;
@@ -318,9 +289,9 @@ public class RecommendationServiceImpl implements RecommendationService {
 
     @Override
     public List<AlbumWrapper> getBestsellers(int size) {
-        // Pobierz wszystkie zamówienia złożone w ciągu zeszłego tygodnia
+        // Pobierz wszystkie zamówienia złożone w ciągu zeszłego miesiąca
         Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.DATE, -7);
+        cal.add(Calendar.DATE, -365);
         List<Order> recentOrders = orderRepository.findAllByDateCreatedAfter(cal.getTime());
         // Wyznacz dla każdego przedmiotu z nich liczbę kopii do id
         Map<Long, Long> productAmounts = new HashMap<>();
@@ -344,8 +315,9 @@ public class RecommendationServiceImpl implements RecommendationService {
         for (Long l : mostBoughtProducts) {
             Album tmp = albumRepository.findById(l).get();
             result.add(new AlbumWrapper(tmp, productAmounts.get(l)));
+            System.out.println("Bestseller " + tmp.getAlbumTitle() + " ilość " + productAmounts.get(l));
         }
-        return result;
+        return result.stream().sorted(Comparator.comparingDouble(AlbumWrapper::getSimilarityValue).reversed()).collect(Collectors.toList());
     }
 
     public Map<Long, Long> getCoverageAndVarietyMetricsForMode(int mode) {
@@ -424,130 +396,6 @@ public class RecommendationServiceImpl implements RecommendationService {
             e.printStackTrace();
         }
         return -1;
-    }
-
-    class GenreEuclidItemDistance implements ItemSimilarity {
-
-        private final Map<Long, Album> fastMapAlbums;
-
-        public GenreEuclidItemDistance(Map<Long, Album> fastMapAlbums) {
-            this.fastMapAlbums = fastMapAlbums;
-        }
-
-        @Override
-        public double itemSimilarity(long l, long l1) throws TasteException {
-//            Album first = albumRepository.findById(l).get();
-//            Album second = albumRepository.findById(l1).get();
-//            // Tutaj zmiana znaku, bo te o najmniejszym dystansie są najbardziej podobne
-//            return -first.getEuclidDistGenres(second);
-            return this.fastMapAlbums.get(l).getEuclidDistGenres(this.fastMapAlbums.get(l1));
-        }
-
-        @Override
-        public double[] itemSimilarities(long l, long[] longs) throws TasteException {
-            return new double[0];
-        }
-
-        @Override
-        public long[] allSimilarItemIDs(long l) throws TasteException {
-            return new long[0];
-        }
-
-        @Override
-        public void refresh(Collection<Refreshable> collection) {
-
-        }
-    }
-
-    class SubgenreEuclidItemDistance implements ItemSimilarity {
-        @Override
-        public double itemSimilarity(long l, long l1) throws TasteException {
-//            Album first = albumRepository.findById(l).get();
-//            Album second = albumRepository.findById(l1).get();
-//            // Tutaj zmiana znaku, bo te o najmniejszym dystansie są najbardziej podobne
-//            return -first.getEuclidDistSubgenres(second);
-            return fastMapAlbums.get(l).getEuclidDistSubgenres(fastMapAlbums.get(l1));
-        }
-
-        @Override
-        public double[] itemSimilarities(long l, long[] longs) throws TasteException {
-            return new double[0];
-        }
-
-        @Override
-        public long[] allSimilarItemIDs(long l) throws TasteException {
-            return new long[0];
-        }
-
-        @Override
-        public void refresh(Collection<Refreshable> collection) {
-
-        }
-    }
-
-    class MixedItemSimilarity implements ItemSimilarity {
-        @Override
-        public double itemSimilarity(long l, long l1) throws TasteException {
-//            Album first = albumRepository.findById(l).get();
-//            Album second = albumRepository.findById(l1).get();
-            Album first = fastMapAlbums.get(l);
-            Album second = fastMapAlbums.get(l1);
-            double similarity = 0.0;
-            if (first.getArtist().getArtistId().compareTo(second.getArtist().getArtistId()) == 0) {
-                similarity += 5;
-            }
-            // Maksymalny dystans dla gatunków i podgatunków to 7 - nic w datasecie nie ma więcej - min to ofc 0
-            // Znormalizuj do 0-1
-            double genreDistance = 1 - (first.getEuclidDistGenres(second) / 7);
-            double subgenreDistance = 1 - (first.getEuclidDistSubgenres(second) / 7);
-            similarity -= genreDistance;
-            similarity -= subgenreDistance;
-            // System.out.println(first.getAlbumTitle() + "-" + second.getAlbumTitle() + ": wynikowe podobieństwo = " + similarity);
-            // Im większy wynik tym lepiej
-            return similarity;
-        }
-
-        @Override
-        public double[] itemSimilarities(long l, long[] longs) throws TasteException {
-            return new double[0];
-        }
-
-        @Override
-        public long[] allSimilarItemIDs(long l) throws TasteException {
-            return new long[0];
-        }
-
-        @Override
-        public void refresh(Collection<Refreshable> collection) {
-
-        }
-    }
-
-    class CosineItemSimilarity implements ItemSimilarity {
-        @Override
-        public double itemSimilarity(long l, long l1) throws TasteException {
-//            Album first = albumRepository.findById(l).get();
-//            Album second = albumRepository.findById(l1).get();
-            Album first = fastMapAlbums.get(l);
-            Album second = fastMapAlbums.get(l1);
-            // Obie z taką samą wagą
-            return 0.5 * first.getCosineGenres(second) + 0.5 * first.getCosineSubgenres(second);
-        }
-
-        @Override
-        public double[] itemSimilarities(long l, long[] longs) throws TasteException {
-            return new double[0];
-        }
-
-        @Override
-        public long[] allSimilarItemIDs(long l) throws TasteException {
-            return new long[0];
-        }
-
-        @Override
-        public void refresh(Collection<Refreshable> collection) {
-
-        }
     }
 
     public class SpearmanRecommenderBuilder implements RecommenderBuilder {

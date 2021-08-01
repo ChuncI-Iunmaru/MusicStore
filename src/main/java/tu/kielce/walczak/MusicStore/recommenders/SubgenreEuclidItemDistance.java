@@ -8,11 +8,11 @@ import tu.kielce.walczak.MusicStore.entity.Album;
 import java.util.Collection;
 import java.util.Map;
 
-public class GenreEuclidItemDistance implements ItemSimilarity {
+public class SubgenreEuclidItemDistance implements ItemSimilarity {
 
     private final Map<Long, Album> fastMapAlbums;
 
-    public GenreEuclidItemDistance(Map<Long, Album> fastMapAlbums) {
+    public SubgenreEuclidItemDistance(Map<Long, Album> fastMapAlbums) {
         this.fastMapAlbums = fastMapAlbums;
     }
 
@@ -21,8 +21,8 @@ public class GenreEuclidItemDistance implements ItemSimilarity {
 //            Album first = albumRepository.findById(l).get();
 //            Album second = albumRepository.findById(l1).get();
 //            // Tutaj zmiana znaku, bo te o najmniejszym dystansie są najbardziej podobne
-//            return -first.getEuclidDistGenres(second);
-        return this.fastMapAlbums.get(l).getEuclidDistGenres(this.fastMapAlbums.get(l1));
+//            return -first.getEuclidDistSubgenres(second);
+        return this.fastMapAlbums.get(l).getEuclidDistSubgenres(this.fastMapAlbums.get(l1));
     }
 
     @Override

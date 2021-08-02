@@ -315,7 +315,7 @@ public class RecommendationServiceImpl implements RecommendationService {
         for (Long l : mostBoughtProducts) {
             Album tmp = albumRepository.findById(l).get();
             result.add(new AlbumWrapper(tmp, productAmounts.get(l)));
-            System.out.println("Bestseller " + tmp.getAlbumTitle() + " ilość " + productAmounts.get(l));
+//            System.out.println("Bestseller " + tmp.getAlbumTitle() + " ilość " + productAmounts.get(l));
         }
         return result.stream().sorted(Comparator.comparingDouble(AlbumWrapper::getSimilarityValue).reversed()).collect(Collectors.toList());
     }

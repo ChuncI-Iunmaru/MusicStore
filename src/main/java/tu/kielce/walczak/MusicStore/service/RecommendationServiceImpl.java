@@ -88,7 +88,6 @@ public class RecommendationServiceImpl implements RecommendationService {
         }
         this.userModel = fillPreferencesFromDB();
         this.itemModel = getDummyAllItems();
-        // Później przenieść tu tworzenie rekomenerów z tego nowego modelu - one i tak wymagają pełnej fast map do działania
         createRecommenders();
     }
 
@@ -169,8 +168,8 @@ public class RecommendationServiceImpl implements RecommendationService {
         // Pobierz customer po ID z bazy danych
         List<Customer> allCustomers = customerRepository.findAll();
         // Tymczasowy limit dla szybszego restartu
-//        for (Customer c : allCustomers.stream().limit(10).collect(Collectors.toList())) {
-        for (Customer c : allCustomers) {
+        for (Customer c : allCustomers.stream().limit(10).collect(Collectors.toList())) {
+//        for (Customer c : allCustomers) {
             // Pobierz dla niego listę zamówień
             List<Order> customersOrders = orderRepository.findAllByCustomer(c);
             // Dla każdego zamówienia pobierz order item, połącz je w jedną listę

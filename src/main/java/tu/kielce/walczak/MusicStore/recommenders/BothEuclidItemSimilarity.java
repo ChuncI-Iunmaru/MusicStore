@@ -8,21 +8,33 @@ import tu.kielce.walczak.MusicStore.entity.Album;
 import java.util.Collection;
 import java.util.Map;
 
-public class SubgenreEuclidItemDistance implements ItemSimilarity {
+public class BothEuclidItemSimilarity implements ItemSimilarity {
 
     private final Map<Long, Album> fastMapAlbums;
 
-    public SubgenreEuclidItemDistance(Map<Long, Album> fastMapAlbums) {
+    public BothEuclidItemSimilarity(Map<Long, Album> fastMapAlbums) {
         this.fastMapAlbums = fastMapAlbums;
+    }
+
+    private double normalizeEuclid(double value) {
+        return 1.0 / (1.0 + value);
     }
 
     @Override
     public double itemSimilarity(long l, long l1) throws TasteException {
-//            Album first = albumRepository.findById(l).get();
-//            Album second = albumRepository.findById(l1).get();
-//            // Tutaj zmiana znaku, bo te o najmniejszym dystansie są najbardziej podobne
-//            return -first.getEuclidDistSubgenres(second);
-        return this.fastMapAlbums.get(l).getEuclidDistSubgenres(this.fastMapAlbums.get(l1));
+        Album first = this.fastMapAlbums.get(l);
+        Album second = this.fastMapAlbums.get(l1);
+        double genreSimilarity = normalizeEuclid(first.getEuclidDistGenres(second));
+        double subgenreSimilarity = normalizeEuclid(first.getCosineSubgenres(second));
+        System.out.println("Euclid Similarity for "
+                + first.getAlbumTitle()
+                + ", "
+                + second.getAlbumTitle()
+                + " = " + genreSimilarity
+                + " + " + subgenreSimilarity);
+
+        return 0.5 * genreSimilarity
+                + 0.5 * subgenreSimilarity;
     }
 
     @Override

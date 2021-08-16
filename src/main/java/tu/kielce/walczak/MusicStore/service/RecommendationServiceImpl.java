@@ -36,7 +36,7 @@ import tu.kielce.walczak.MusicStore.entity.OrderItem;
 import tu.kielce.walczak.MusicStore.recommenders.CosineItemSimilarity;
 import tu.kielce.walczak.MusicStore.recommenders.GenreEuclidItemDistance;
 import tu.kielce.walczak.MusicStore.recommenders.MixedItemSimilarity;
-import tu.kielce.walczak.MusicStore.recommenders.SubgenreEuclidItemDistance;
+import tu.kielce.walczak.MusicStore.recommenders.BothEuclidItemSimilarity;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -83,19 +83,21 @@ public class RecommendationServiceImpl implements RecommendationService {
 
     private void createRecommenders(){
         try {
+            System.out.println("Tworzenie rekomenderów");
             euclidGenresRecommender = new GenericItemBasedRecommender(model, new GenreEuclidItemDistance(fastMapAlbums));
-            euclidSubgenresRecommender = new GenericItemBasedRecommender(model, new SubgenreEuclidItemDistance(fastMapAlbums));
-            mixedRecommender = new GenericItemBasedRecommender(model, new MixedItemSimilarity(fastMapAlbums));
+            euclidSubgenresRecommender = new GenericItemBasedRecommender(model, new BothEuclidItemSimilarity(fastMapAlbums));
+            mixedRecommender = new GenericItemBasedRecommender(model, new MixedItemSimilarity(fastMapAlbums, 1955, 2011));
             cosineRecommender = new GenericItemBasedRecommender(model, new CosineItemSimilarity(fastMapAlbums));
 
             UserSimilarity similarity = new SpearmanCorrelationSimilarity(model);
+//            UserSimilarity similarity = new PearsonCorrelationSimilarity(model);
             UserNeighborhood neighborhood = null;
-            neighborhood = new NearestNUserNeighborhood(2500, similarity, model);
-//            for (int i = 1; i < 10; i++) {
-//                if (neighborhood.getUserNeighborhood(i).length > 0) {
-//                    System.out.println("userId=" + i + Arrays.toString(neighborhood.getUserNeighborhood(i)));
-//                }
-//            }
+            neighborhood = new NearestNUserNeighborhood(2500, 0.000000000001, similarity, model);
+            for (int i = 1; i < 2500; i++) {
+                if (neighborhood.getUserNeighborhood(i).length > 0) {
+                    System.out.println("userId=" + i + Arrays.toString(neighborhood.getUserNeighborhood(i)));
+                }
+            }
             userSpearmanRecommender = new GenericUserBasedRecommender(model, neighborhood, similarity);
         } catch (TasteException e) {
             e.printStackTrace();
@@ -135,20 +137,21 @@ public class RecommendationServiceImpl implements RecommendationService {
         List<Long> albumIds = albumRepository.findAll().stream().map(Album::getAlbumId).collect(Collectors.toList());
         FastByIDMap<PreferenceArray> preferences = new FastByIDMap<>();
         PreferenceArray prefsForUser = new GenericUserPreferenceArray(albumIds.size());
-        prefsForUser.setUserID(0, 1L);
+        prefsForUser.setUserID(-1, -1L);
         int index = 0;
         for (Long id : albumIds) {
             prefsForUser.setItemID(index, id);
             prefsForUser.setValue(index, 1.0f);
             index++;
         }
-        preferences.put(1L, prefsForUser);
+        preferences.put(-1L, prefsForUser);
 
         // Dla każdego klienta
         // Pobierz customer po ID z bazy danych
         List<Customer> allCustomers = customerRepository.findAll();
         // Tymczasowy limit dla szybszego restartu
-        for (Customer c : allCustomers.stream().limit(10).collect(Collectors.toList())) {
+//        for (Customer c : allCustomers.stream().limit(10).collect(Collectors.toList())) {
+        for (Customer c : allCustomers) {
             // Pobierz dla niego listę zamówień
             List<Order> customersOrders = orderRepository.findAllByCustomer(c);
             // Dla każdego zamówienia pobierz order item, połącz je w jedną listę
@@ -205,7 +208,9 @@ public class RecommendationServiceImpl implements RecommendationService {
         for (RecommendedItem item : recommendations) {
             Album recommended = albumRepository.findById(item.getItemID()).get();
             //System.out.println(recommended.getAlbumTitle() + " value: " + item.getValue());
-            result.add(new AlbumWrapper(recommended, item.getValue()));
+            if (item.getValue() < 0) {
+                result.add(new AlbumWrapper(recommended, item.getValue() * -1.0));
+            } else result.add(new AlbumWrapper(recommended, item.getValue()));
         }
         return result;
     }
@@ -279,7 +284,12 @@ public class RecommendationServiceImpl implements RecommendationService {
             }
             List<RecommendedItem> recommendations = null;
             recommendations = userSpearmanRecommender.recommend(userId, size);
+            System.out.println(Arrays.toString(userSpearmanRecommender.mostSimilarUserIDs(userId, 10)));
             System.out.println("Rekomendacje dla użytkownika:");
+            if (recommendations.isEmpty()) System.out.println("Nie znaleziono żadnych rekomendacji!");
+            for (RecommendedItem r : recommendations){
+                System.out.println(r.getItemID() + " - " + r.getValue());
+            }
             return wrapRecommendations(recommendations);
         } catch (TasteException e) {
             e.printStackTrace();

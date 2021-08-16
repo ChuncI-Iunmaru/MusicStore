@@ -1,11 +1,8 @@
 package tu.kielce.walczak.MusicStore.service;
 
 import org.apache.mahout.cf.taste.common.TasteException;
-import org.apache.mahout.cf.taste.eval.RecommenderBuilder;
-import org.apache.mahout.cf.taste.eval.RecommenderEvaluator;
 import org.apache.mahout.cf.taste.impl.common.FastByIDMap;
 import org.apache.mahout.cf.taste.impl.common.FastMap;
-import org.apache.mahout.cf.taste.impl.eval.AverageAbsoluteDifferenceRecommenderEvaluator;
 import org.apache.mahout.cf.taste.impl.model.GenericDataModel;
 import org.apache.mahout.cf.taste.impl.model.GenericUserPreferenceArray;
 import org.apache.mahout.cf.taste.impl.neighborhood.NearestNUserNeighborhood;
@@ -20,7 +17,6 @@ import org.apache.mahout.cf.taste.model.PreferenceArray;
 import org.apache.mahout.cf.taste.neighborhood.UserNeighborhood;
 import org.apache.mahout.cf.taste.recommender.ItemBasedRecommender;
 import org.apache.mahout.cf.taste.recommender.RecommendedItem;
-import org.apache.mahout.cf.taste.recommender.Recommender;
 import org.apache.mahout.cf.taste.recommender.UserBasedRecommender;
 import org.apache.mahout.cf.taste.similarity.ItemSimilarity;
 import org.apache.mahout.cf.taste.similarity.UserSimilarity;
@@ -35,10 +31,7 @@ import tu.kielce.walczak.MusicStore.entity.Album;
 import tu.kielce.walczak.MusicStore.entity.Customer;
 import tu.kielce.walczak.MusicStore.entity.Order;
 import tu.kielce.walczak.MusicStore.entity.OrderItem;
-import tu.kielce.walczak.MusicStore.recommenders.CosineItemSimilarity;
-import tu.kielce.walczak.MusicStore.recommenders.GenreEuclidItemDistance;
-import tu.kielce.walczak.MusicStore.recommenders.MixedItemSimilarity;
-import tu.kielce.walczak.MusicStore.recommenders.BothEuclidItemSimilarity;
+import tu.kielce.walczak.MusicStore.recommenders.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -316,13 +309,13 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     @Override
-    public List<AlbumWrapper> getUniversalUserRecs(Long userId, int size, Mode mode) {
+    public List<AlbumWrapper> getUniversalUserRecs(Long userId, int size, UserBasedMode userBasedMode) {
         UserBasedRecommender recommender;
-        if (mode.equals(Mode.PearsonNearest)){
+        if (userBasedMode.equals(UserBasedMode.PearsonNearest)){
             recommender = pearsonNRecommender;
-        } else if (mode.equals(Mode.PearsonThreshold)){
+        } else if (userBasedMode.equals(UserBasedMode.PearsonThreshold)){
             recommender = pearsonTRecommender;
-        } else if (mode.equals(Mode.SpearmanNearest)){
+        } else if (userBasedMode.equals(UserBasedMode.SpearmanNearest)){
             recommender = spearmanNRecommender;
         } else {
             recommender = spearmanTRecommender;
@@ -447,23 +440,16 @@ public class RecommendationServiceImpl implements RecommendationService {
         return occurences;
     }
 
-    public double getEvaluation(double trainingSplit, double usersSplit) {
-        RecommenderEvaluator evaluator = new AverageAbsoluteDifferenceRecommenderEvaluator();
-        RecommenderBuilder builder = new SpearmanRecommenderBuilder();
-        try {
-            return evaluator.evaluate(builder, null, userModel, trainingSplit, usersSplit);
-        } catch (TasteException e) {
-            e.printStackTrace();
-        }
-        return -1;
+
+    public DataModel getUserModel() {
+        return userModel;
     }
 
-    public class SpearmanRecommenderBuilder implements RecommenderBuilder {
-        @Override
-        public Recommender buildRecommender(DataModel dataModel) throws TasteException {
-            UserSimilarity similarity = new SpearmanCorrelationSimilarity(userModel);
-            UserNeighborhood neighborhood = new NearestNUserNeighborhood(10, similarity, userModel);
-            return new GenericUserBasedRecommender(userModel, neighborhood, similarity);
-        }
+    public DataModel getItemModel() {
+        return itemModel;
+    }
+
+    public Map<Long, Album> getFastMapAlbums() {
+        return fastMapAlbums;
     }
 }

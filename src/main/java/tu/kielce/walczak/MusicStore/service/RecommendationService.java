@@ -1,15 +1,14 @@
 package tu.kielce.walczak.MusicStore.service;
 
+import org.apache.mahout.cf.taste.model.DataModel;
 import tu.kielce.walczak.MusicStore.dto.AlbumWrapper;
 import tu.kielce.walczak.MusicStore.entity.Album;
+import tu.kielce.walczak.MusicStore.recommenders.UserBasedMode;
 
 import java.util.List;
 import java.util.Map;
 
 public interface RecommendationService {
-    enum Mode {
-        SpearmanNearest, SpearmanThreshold, PearsonNearest, PearsonThreshold
-    }
 
     List<AlbumWrapper> getTestRecommendations(Long albumid, int size);
 
@@ -23,12 +22,15 @@ public interface RecommendationService {
 
     List<AlbumWrapper> getDummyUserRecs(Long userId, int size);
 
-    List<AlbumWrapper> getUniversalUserRecs(Long userId, int size, Mode mode);
+    List<AlbumWrapper> getUniversalUserRecs(Long userId, int size, UserBasedMode userBasedMode);
 
     List<AlbumWrapper> getBestsellers(int size);
 
     Map<Long, Long> getCoverageAndVarietyMetricsForMode(int mode);
 
-    double getEvaluation(double trainingSplit, double usersSplit);
     void fillDataFromDB();
+
+    DataModel getUserModel();
+    DataModel getItemModel();
+    Map<Long, Album> getFastMapAlbums();
 }

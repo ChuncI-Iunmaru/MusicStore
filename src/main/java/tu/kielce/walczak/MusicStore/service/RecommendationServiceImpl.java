@@ -53,7 +53,8 @@ public class RecommendationServiceImpl implements RecommendationService {
     private ItemBasedRecommender mixedRecommender;
     private ItemBasedRecommender cosineRecommender;
     private UserBasedRecommender userSpearmanRecommender;
-    private DataModel model;
+    private DataModel userModel;
+    private DataModel itemModel;
 
     private Map<Long, Album> fastMapAlbums = new FastMap<>();
 
@@ -76,7 +77,8 @@ public class RecommendationServiceImpl implements RecommendationService {
             System.out.println(a.getSubgenres());
             fastMapAlbums.put(a.getAlbumId(), a);
         }
-        this.model = fillPreferencesFromDB();
+        this.userModel = fillPreferencesFromDB();
+        this.itemModel = getDummyAllItems();
         // Później przenieść tu tworzenie rekomenerów z tego nowego modelu - one i tak wymagają pełnej fast map do działania
         createRecommenders();
     }
@@ -84,21 +86,21 @@ public class RecommendationServiceImpl implements RecommendationService {
     private void createRecommenders(){
         try {
             System.out.println("Tworzenie rekomenderów");
-            euclidGenresRecommender = new GenericItemBasedRecommender(model, new GenreEuclidItemDistance(fastMapAlbums));
-            euclidSubgenresRecommender = new GenericItemBasedRecommender(model, new BothEuclidItemSimilarity(fastMapAlbums));
-            mixedRecommender = new GenericItemBasedRecommender(model, new MixedItemSimilarity(fastMapAlbums, 1955, 2011));
-            cosineRecommender = new GenericItemBasedRecommender(model, new CosineItemSimilarity(fastMapAlbums));
+            euclidGenresRecommender = new GenericItemBasedRecommender(itemModel, new GenreEuclidItemDistance(fastMapAlbums));
+            euclidSubgenresRecommender = new GenericItemBasedRecommender(itemModel, new BothEuclidItemSimilarity(fastMapAlbums));
+            mixedRecommender = new GenericItemBasedRecommender(itemModel, new MixedItemSimilarity(fastMapAlbums, 1955, 2011));
+            cosineRecommender = new GenericItemBasedRecommender(itemModel, new CosineItemSimilarity(fastMapAlbums));
 
-            UserSimilarity similarity = new SpearmanCorrelationSimilarity(model);
+            UserSimilarity similarity = new SpearmanCorrelationSimilarity(userModel);
 //            UserSimilarity similarity = new PearsonCorrelationSimilarity(model);
             UserNeighborhood neighborhood = null;
-            neighborhood = new NearestNUserNeighborhood(2500, 0.000000000001, similarity, model);
+            neighborhood = new NearestNUserNeighborhood(2500, 0.000000000001, similarity, userModel);
             for (int i = 1; i < 2500; i++) {
                 if (neighborhood.getUserNeighborhood(i).length > 0) {
                     System.out.println("userId=" + i + Arrays.toString(neighborhood.getUserNeighborhood(i)));
                 }
             }
-            userSpearmanRecommender = new GenericUserBasedRecommender(model, neighborhood, similarity);
+            userSpearmanRecommender = new GenericUserBasedRecommender(userModel, neighborhood, similarity);
         } catch (TasteException e) {
             e.printStackTrace();
         }
@@ -133,7 +135,7 @@ public class RecommendationServiceImpl implements RecommendationService {
         return new GenericDataModel(preferences);
     }
 
-    private DataModel fillPreferencesFromDB() {
+    private DataModel getDummyAllItems(){
         List<Long> albumIds = albumRepository.findAll().stream().map(Album::getAlbumId).collect(Collectors.toList());
         FastByIDMap<PreferenceArray> preferences = new FastByIDMap<>();
         PreferenceArray prefsForUser = new GenericUserPreferenceArray(albumIds.size());
@@ -145,7 +147,11 @@ public class RecommendationServiceImpl implements RecommendationService {
             index++;
         }
         preferences.put(-1L, prefsForUser);
+        return new GenericDataModel(preferences);
+    }
 
+    private DataModel fillPreferencesFromDB() {
+        FastByIDMap<PreferenceArray> preferences = new FastByIDMap<>();
         // Dla każdego klienta
         // Pobierz customer po ID z bazy danych
         List<Customer> allCustomers = customerRepository.findAll();
@@ -279,7 +285,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     public List<AlbumWrapper> getDummyUserRecs(Long userId, int size) {
         try {
             System.out.println("Przedmioty ocenione przez użytkownika:");
-            for (Preference pref : model.getPreferencesFromUser(userId)) {
+            for (Preference pref : userModel.getPreferencesFromUser(userId)) {
                 System.out.println("itemId=" + pref.getItemID() + " , miara=" + pref.getValue());
             }
             List<RecommendedItem> recommendations = null;
@@ -401,7 +407,7 @@ public class RecommendationServiceImpl implements RecommendationService {
         RecommenderEvaluator evaluator = new AverageAbsoluteDifferenceRecommenderEvaluator();
         RecommenderBuilder builder = new SpearmanRecommenderBuilder();
         try {
-            return evaluator.evaluate(builder, null, model, trainingSplit, usersSplit);
+            return evaluator.evaluate(builder, null, userModel, trainingSplit, usersSplit);
         } catch (TasteException e) {
             e.printStackTrace();
         }
@@ -411,9 +417,9 @@ public class RecommendationServiceImpl implements RecommendationService {
     public class SpearmanRecommenderBuilder implements RecommenderBuilder {
         @Override
         public Recommender buildRecommender(DataModel dataModel) throws TasteException {
-            UserSimilarity similarity = new SpearmanCorrelationSimilarity(model);
-            UserNeighborhood neighborhood = new NearestNUserNeighborhood(10, similarity, model);
-            return new GenericUserBasedRecommender(model, neighborhood, similarity);
+            UserSimilarity similarity = new SpearmanCorrelationSimilarity(userModel);
+            UserNeighborhood neighborhood = new NearestNUserNeighborhood(10, similarity, userModel);
+            return new GenericUserBasedRecommender(userModel, neighborhood, similarity);
         }
     }
 }

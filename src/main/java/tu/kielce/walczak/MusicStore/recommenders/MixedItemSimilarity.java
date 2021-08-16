@@ -63,14 +63,14 @@ public class MixedItemSimilarity implements ItemSimilarity {
                 - Double.parseDouble(second.getAlbumYear()));
         yearSimilarity = normalize(yearSimilarity, 0, endYear - startYear);
 
-        System.out.println("Mixed similarity for "
-                + first.getAlbumTitle()
-                + ", "
-                + second.getAlbumTitle()
-                + " = " + artistSimilarity
-                + " + " + genreSimilarity
-                + " + " + subgenreSimilarity
-                + " + " + yearSimilarity);
+//        System.out.println("Mixed similarity for "
+//                + first.getAlbumTitle()
+//                + ", "
+//                + second.getAlbumTitle()
+//                + " = " + artistSimilarity
+//                + " + " + genreSimilarity
+//                + " + " + subgenreSimilarity
+//                + " + " + yearSimilarity);
 
         return 0.3 * artistSimilarity
                + 0.3 * genreSimilarity

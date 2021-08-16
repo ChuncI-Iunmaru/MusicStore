@@ -26,12 +26,12 @@ public class BothEuclidItemSimilarity implements ItemSimilarity {
         Album second = this.fastMapAlbums.get(l1);
         double genreSimilarity = normalizeEuclid(first.getEuclidDistGenres(second));
         double subgenreSimilarity = normalizeEuclid(first.getEuclidDistSubgenres(second));
-        System.out.println("Euclid Similarity for "
-                + first.getAlbumTitle()
-                + ", "
-                + second.getAlbumTitle()
-                + " = " + genreSimilarity
-                + " + " + subgenreSimilarity);
+//        System.out.println("Euclid Similarity for "
+//                + first.getAlbumTitle()
+//                + ", "
+//                + second.getAlbumTitle()
+//                + " = " + genreSimilarity
+//                + " + " + subgenreSimilarity);
 
         return 0.5 * genreSimilarity
                 + 0.5 * subgenreSimilarity;

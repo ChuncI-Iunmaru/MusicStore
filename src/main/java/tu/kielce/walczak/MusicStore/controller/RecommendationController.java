@@ -59,6 +59,30 @@ public class RecommendationController {
         return recommendationService.getDummyUserRecs(userId, size);
     }
 
+    @GetMapping("/pearsonNearest")
+    public List<AlbumWrapper> getPearsonNearestNRecs(@RequestParam("id") Long userId, @RequestParam("size") int size) {
+        System.out.println("Prośba o rekomendacje pearson nearest n on user dla userId=" + userId + ", rozmiar listy=" + size);
+        return recommendationService.getUniversalUserRecs(userId, size, RecommendationService.Mode.PearsonNearest);
+    }
+
+    @GetMapping("/pearsonThreshold")
+    public List<AlbumWrapper> getPearsonThresholdRecs(@RequestParam("id") Long userId, @RequestParam("size") int size) {
+        System.out.println("Prośba o rekomendacje pearson threshold on user dla userId=" + userId + ", rozmiar listy=" + size);
+        return recommendationService.getUniversalUserRecs(userId, size, RecommendationService.Mode.PearsonThreshold);
+    }
+
+    @GetMapping("/spearmanNearest")
+    public List<AlbumWrapper> getSpearmanNearestNRecs(@RequestParam("id") Long userId, @RequestParam("size") int size) {
+        System.out.println("Prośba o rekomendacje spearman nearest n on user dla userId=" + userId + ", rozmiar listy=" + size);
+        return recommendationService.getUniversalUserRecs(userId, size, RecommendationService.Mode.SpearmanNearest);
+    }
+
+    @GetMapping("/spearmanThreshold")
+    public List<AlbumWrapper> getSpearmanThresholdRecs(@RequestParam("id") Long userId, @RequestParam("size") int size) {
+        System.out.println("Prośba o rekomendacje spearman threshold on user dla userId=" + userId + ", rozmiar listy=" + size);
+        return recommendationService.getUniversalUserRecs(userId, size, RecommendationService.Mode.SpearmanThreshold);
+    }
+
     @GetMapping("/recentBestsellers")
     public List<AlbumWrapper> getRecentBestsellers(@RequestParam("size") int size) {
         System.out.println("Prośba o bestsellery" + ", rozmiar listy=" + size);

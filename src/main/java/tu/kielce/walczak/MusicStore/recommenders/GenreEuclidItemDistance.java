@@ -22,10 +22,6 @@ public class GenreEuclidItemDistance implements ItemSimilarity {
 
     @Override
     public double itemSimilarity(long l, long l1) throws TasteException {
-//            Album first = albumRepository.findById(l).get();
-//            Album second = albumRepository.findById(l1).get();
-//            // Tutaj zmiana znaku, bo te o najmniejszym dystansie są najbardziej podobne
-//            return -first.getEuclidDistGenres(second);
         return -this.fastMapAlbums.get(l).getEuclidDistGenres(this.fastMapAlbums.get(l1));
     }
 

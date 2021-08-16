@@ -7,6 +7,10 @@ import java.util.List;
 import java.util.Map;
 
 public interface RecommendationService {
+    enum Mode {
+        SpearmanNearest, SpearmanThreshold, PearsonNearest, PearsonThreshold
+    }
+
     List<AlbumWrapper> getTestRecommendations(Long albumid, int size);
 
     List<AlbumWrapper> getEuclidGenreRecs(Long albumId, int size);
@@ -18,6 +22,8 @@ public interface RecommendationService {
     List<AlbumWrapper> getCosineRecs(Long albumId, int size);
 
     List<AlbumWrapper> getDummyUserRecs(Long userId, int size);
+
+    List<AlbumWrapper> getUniversalUserRecs(Long userId, int size, Mode mode);
 
     List<AlbumWrapper> getBestsellers(int size);
 

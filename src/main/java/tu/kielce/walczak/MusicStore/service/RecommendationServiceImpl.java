@@ -9,8 +9,10 @@ import org.apache.mahout.cf.taste.impl.eval.AverageAbsoluteDifferenceRecommender
 import org.apache.mahout.cf.taste.impl.model.GenericDataModel;
 import org.apache.mahout.cf.taste.impl.model.GenericUserPreferenceArray;
 import org.apache.mahout.cf.taste.impl.neighborhood.NearestNUserNeighborhood;
+import org.apache.mahout.cf.taste.impl.neighborhood.ThresholdUserNeighborhood;
 import org.apache.mahout.cf.taste.impl.recommender.GenericItemBasedRecommender;
 import org.apache.mahout.cf.taste.impl.recommender.GenericUserBasedRecommender;
+import org.apache.mahout.cf.taste.impl.similarity.PearsonCorrelationSimilarity;
 import org.apache.mahout.cf.taste.impl.similarity.SpearmanCorrelationSimilarity;
 import org.apache.mahout.cf.taste.model.DataModel;
 import org.apache.mahout.cf.taste.model.Preference;
@@ -47,12 +49,19 @@ public class RecommendationServiceImpl implements RecommendationService {
     private AlbumRepository albumRepository;
     private OrderRepository orderRepository;
     private CustomerRepository customerRepository;
+
     private final Random random = new Random();
+
     private ItemBasedRecommender euclidGenresRecommender;
     private ItemBasedRecommender euclidSubgenresRecommender;
     private ItemBasedRecommender mixedRecommender;
     private ItemBasedRecommender cosineRecommender;
-    private UserBasedRecommender userSpearmanRecommender;
+
+    private UserBasedRecommender spearmanNRecommender;
+    private UserBasedRecommender spearmanTRecommender;
+    private UserBasedRecommender pearsonNRecommender;
+    private UserBasedRecommender pearsonTRecommender;
+
     private DataModel userModel;
     private DataModel itemModel;
 
@@ -91,16 +100,20 @@ public class RecommendationServiceImpl implements RecommendationService {
             mixedRecommender = new GenericItemBasedRecommender(itemModel, new MixedItemSimilarity(fastMapAlbums, 1955, 2011));
             cosineRecommender = new GenericItemBasedRecommender(itemModel, new CosineItemSimilarity(fastMapAlbums));
 
-            UserSimilarity similarity = new SpearmanCorrelationSimilarity(userModel);
-//            UserSimilarity similarity = new PearsonCorrelationSimilarity(model);
-            UserNeighborhood neighborhood = null;
-            neighborhood = new NearestNUserNeighborhood(2500, 0.000000000001, similarity, userModel);
-            for (int i = 1; i < 2500; i++) {
-                if (neighborhood.getUserNeighborhood(i).length > 0) {
-                    System.out.println("userId=" + i + Arrays.toString(neighborhood.getUserNeighborhood(i)));
-                }
-            }
-            userSpearmanRecommender = new GenericUserBasedRecommender(userModel, neighborhood, similarity);
+            UserSimilarity spearmanCorrelationSimilarity = new SpearmanCorrelationSimilarity(userModel);
+            UserSimilarity pearsonSimilarity = new PearsonCorrelationSimilarity(userModel);
+
+            UserNeighborhood spearmanNNeighborhood = new NearestNUserNeighborhood(2500, spearmanCorrelationSimilarity, userModel);
+            spearmanNRecommender = new GenericUserBasedRecommender(userModel, spearmanNNeighborhood, spearmanCorrelationSimilarity);
+
+            UserNeighborhood spearmanTNeighborhood = new ThresholdUserNeighborhood(0.001, spearmanCorrelationSimilarity, userModel);
+            spearmanTRecommender = new GenericUserBasedRecommender(userModel, spearmanTNeighborhood, spearmanCorrelationSimilarity);
+
+            UserNeighborhood pearsonNNeighborhood = new NearestNUserNeighborhood(2500, pearsonSimilarity, userModel);
+            pearsonNRecommender = new GenericUserBasedRecommender(userModel, pearsonNNeighborhood, spearmanCorrelationSimilarity);
+
+            UserNeighborhood pearsonTNeighborhood = new ThresholdUserNeighborhood(0.001, pearsonSimilarity, userModel);
+            pearsonTRecommender = new GenericUserBasedRecommender(userModel, pearsonTNeighborhood, spearmanCorrelationSimilarity);
         } catch (TasteException e) {
             e.printStackTrace();
         }
@@ -289,8 +302,40 @@ public class RecommendationServiceImpl implements RecommendationService {
                 System.out.println("itemId=" + pref.getItemID() + " , miara=" + pref.getValue());
             }
             List<RecommendedItem> recommendations = null;
-            recommendations = userSpearmanRecommender.recommend(userId, size);
-            System.out.println(Arrays.toString(userSpearmanRecommender.mostSimilarUserIDs(userId, 10)));
+            recommendations = spearmanNRecommender.recommend(userId, size);
+            System.out.println(Arrays.toString(spearmanNRecommender.mostSimilarUserIDs(userId, 10)));
+            System.out.println("Rekomendacje dla użytkownika:");
+            if (recommendations.isEmpty()) System.out.println("Nie znaleziono żadnych rekomendacji!");
+            for (RecommendedItem r : recommendations){
+                System.out.println(r.getItemID() + " - " + r.getValue());
+            }
+            return wrapRecommendations(recommendations);
+        } catch (TasteException e) {
+            e.printStackTrace();
+            return Collections.emptyList();
+        }
+    }
+
+    @Override
+    public List<AlbumWrapper> getUniversalUserRecs(Long userId, int size, Mode mode) {
+        UserBasedRecommender recommender;
+        if (mode.equals(Mode.PearsonNearest)){
+            recommender = pearsonNRecommender;
+        } else if (mode.equals(Mode.PearsonThreshold)){
+            recommender = pearsonTRecommender;
+        } else if (mode.equals(Mode.SpearmanNearest)){
+            recommender = spearmanNRecommender;
+        } else {
+            recommender = spearmanTRecommender;
+        }
+        try {
+            System.out.println("Przedmioty ocenione przez użytkownika:");
+            for (Preference pref : userModel.getPreferencesFromUser(userId)) {
+                System.out.println("itemId=" + pref.getItemID() + " , miara=" + pref.getValue());
+            }
+            List<RecommendedItem> recommendations = null;
+            recommendations = recommender.recommend(userId, size);
+            System.out.println(Arrays.toString(recommender.mostSimilarUserIDs(userId, 10)));
             System.out.println("Rekomendacje dla użytkownika:");
             if (recommendations.isEmpty()) System.out.println("Nie znaleziono żadnych rekomendacji!");
             for (RecommendedItem r : recommendations){

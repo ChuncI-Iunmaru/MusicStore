@@ -5,6 +5,9 @@ import org.apache.mahout.cf.taste.model.DataModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import tu.kielce.walczak.MusicStore.dto.AlbumWrapper;
+import tu.kielce.walczak.MusicStore.entity.Album;
+import tu.kielce.walczak.MusicStore.recommenders.ContentBasedEvaluator;
+import tu.kielce.walczak.MusicStore.recommenders.ContentBasedMode;
 import tu.kielce.walczak.MusicStore.recommenders.UserBasedEvaluator;
 import tu.kielce.walczak.MusicStore.recommenders.UserBasedMode;
 import tu.kielce.walczak.MusicStore.service.RecommendationService;
@@ -15,8 +18,10 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/rec")
@@ -98,28 +103,12 @@ public class RecommendationController {
         return recommendationService.getBestsellers(size);
     }
 
-    @GetMapping("/metrics")
-    public void getMetrics() {
-        Map<Long, Long> resultEuclid = recommendationService.getCoverageAndVarietyMetricsForMode(1);
-        //recommendationService.getCoverageAndVarietyMetricsForMode(2);
-        Map<Long, Long> resultCosine =recommendationService.getCoverageAndVarietyMetricsForMode(3);
-        //recommendationService.getCoverageAndVarietyMetricsForMode(4);
-    }
-
-//    @GetMapping("/evaluation")
-//    public void getEvaluation() {
-//        System.out.println("Dla 100 użytkowników (1%): " + recommendationService.getEvaluation(0.8, 0.01));
-//        System.out.println("Dla 1000 użytkowników (10%): " + recommendationService.getEvaluation(0.8, 0.1));
-//        System.out.println("Dla 5000 użytkowników (50%): " + recommendationService.getEvaluation(0.8, 0.5));
-//        System.out.println("Dla 10000 użytkowników (100%): " + recommendationService.getEvaluation(0.8, 1.0));
-//    }
-
     @GetMapping("/userBasedEvaluation")
     public void getUserBasedEvaluation() {
         DataModel model = recommendationService.getUserModel();
-        System.out.println("Generowanie logów porównywania");
+        System.out.println("Generowanie logów porównywania user-based");
         try {
-            String fileName = "evaluation_"
+            String fileName = "user_evaluation_"
                     + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy_HH_mm"))
                     + ".txt";
             System.out.println(fileName);
@@ -140,6 +129,51 @@ public class RecommendationController {
                     printWriter.println(evaluator.getEvaluation(trainingSplit, userSplit, mode));
                     printWriter.println();
                 }
+                printWriter.println("--------------------------------------------------------------------------------");
+                printWriter.println();
+            }
+            printWriter.close();
+        } catch (IOException | TasteException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @GetMapping("/contentBasedEvaluation")
+    public void getContentBasedEvaluation(){
+        DataModel model = recommendationService.getItemModel();
+        Map<Long, Album> albums = recommendationService.getFastMapAlbums();
+        int recSize = 5;
+        System.out.println("Generowanie logów porównywania content-based");
+        try {
+            String fileName = "content_evaluation_"
+                    + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy_HH_mm"))
+                    + ".txt";
+            FileWriter fileWriter = new FileWriter(fileName);
+            PrintWriter printWriter = new PrintWriter(fileWriter);
+            printWriter.printf("Załadowanych %d użytkowników \n", model.getNumUsers());
+            printWriter.printf("Załadowanych %d items \n", model.getNumItems());
+            printWriter.printf("Rozmiar listy rekomendacji = %d \n", recSize);
+            ContentBasedEvaluator evaluator = new ContentBasedEvaluator(model,albums);
+            List<Long> albumIdsAsc = albums.keySet().stream().sorted().collect(Collectors.toList());
+
+            for (ContentBasedMode mode: ContentBasedMode.values()){
+                Map<Long, Integer> albumCount = evaluator.getAlbumRecsCount(mode, recSize);
+                Map<Long, Float> maxSimValues = evaluator.getMaxSimilarityValues(mode, recSize);
+                Map<Long, Float> minSimValues = evaluator.getMinSimilarityValues(mode, recSize);
+                List<Long> unrecommendedAlbums = evaluator.getUnrecommendedAlbums(mode, recSize);
+                printWriter.println("--------------------------------------------------------------------------------");
+                printWriter.printf("Dla algorytmu %s\n", mode.name());
+                printWriter.printf("id;count;minSim;maxSim\n");
+                for (Long id: albumIdsAsc){
+                    printWriter.printf("%d;%d;%f;%f\n",
+                            id,
+                            albumCount.get(id),
+                            minSimValues.get(id),
+                            maxSimValues.get(id));
+                }
+                printWriter.println();
+                printWriter.printf("Nie pojawiło się ani razu %d albumów\n", unrecommendedAlbums.size());
+//                printWriter.println(Arrays.toString(unrecommendedAlbums.toArray()));
                 printWriter.println("--------------------------------------------------------------------------------");
                 printWriter.println();
             }

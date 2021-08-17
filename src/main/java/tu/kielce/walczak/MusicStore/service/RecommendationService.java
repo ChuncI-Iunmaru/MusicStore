@@ -26,8 +26,6 @@ public interface RecommendationService {
 
     List<AlbumWrapper> getBestsellers(int size);
 
-    Map<Long, Long> getCoverageAndVarietyMetricsForMode(int mode);
-
     void fillDataFromDB();
 
     DataModel getUserModel();

@@ -7,6 +7,7 @@ import tu.kielce.walczak.MusicStore.dao.OrderRepository;
 import tu.kielce.walczak.MusicStore.entity.Order;
 import tu.kielce.walczak.MusicStore.entity.OrderItem;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 @Service
@@ -53,8 +54,10 @@ public class StatsService {
         List<Long> results = new ArrayList<>();
 
         for (int i = 0; i < 12; i++) {
-            List<Order> tmpOrders = orderRepository.findAllByDate(dateStart, dateEnd);
-            results.add(calculateUnitsSoldFromOrders(tmpOrders));
+            //List<Order> tmpOrders = orderRepository.findAllByDate(dateStart, dateEnd);
+            //results.add(calculateUnitsSoldFromOrders(tmpOrders));
+            Long tmpSales = orderRepository.getSalesBetweenDates(dateStart, dateEnd);
+            results.add(tmpSales == null ? 0 : tmpSales);
             System.out.println("Sprzedaż dla " + months[i] + " - " + results.get(i));
             dateStart = dateEnd;
             cal.add(Calendar.MONTH, 1);
@@ -73,8 +76,10 @@ public class StatsService {
 
         List<Double> profits = new ArrayList<>();
         for (int i = 0; i < 12; i++) {
-            List<Order> tmpOrders = orderRepository.findAllByDate(dateStart, dateEnd);
-            profits.add(calculateProfitsFromOrders(tmpOrders));
+            //List<Order> tmpOrders = orderRepository.findAllByDate(dateStart, dateEnd);
+            //profits.add(calculateProfitsFromOrders(tmpOrders));
+            BigDecimal tmpProfit = orderRepository.getProfitsBetweenDates(dateStart, dateEnd);
+            profits.add(tmpProfit == null ? 0.0 : tmpProfit.doubleValue());
             System.out.println("Sprzedaż dla " + months[i] + " - " + profits.get(i));
             dateStart = dateEnd;
             cal.add(Calendar.MONTH, 1);

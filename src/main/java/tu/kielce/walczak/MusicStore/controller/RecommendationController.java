@@ -119,13 +119,15 @@ public class RecommendationController {
             printWriter.printf("Załadowanych %d użytkowników \n", model.getNumUsers());
             printWriter.printf("Załadowanych %d items \n", model.getNumItems());
             printWriter.printf("Training Split = %f", trainingSplit);
-            UserBasedEvaluator evaluator = new UserBasedEvaluator(model, 0.001, 10);
+            UserBasedEvaluator evaluator = new UserBasedEvaluator(model, 0.1, 100);
 
             for (UserBasedMode mode: UserBasedMode.values()){
                 printWriter.println("--------------------------------------------------------------------------------");
                 printWriter.printf("Dla algorytmu %s\n", mode.name());
+                System.out.println("Dla algorytmu " + mode.name());
                 for (double userSplit : userSplits){
-                    printWriter.printf("Dla %f%% (%f) użytkowników (users split) = ",userSplit, userSplit*model.getNumUsers());
+                    System.out.printf("Dla %f%% (%f) użytkowników (users split)\n",userSplit*100, userSplit*model.getNumUsers());
+                    printWriter.printf("Dla %f%% (%f) użytkowników (users split) = ",userSplit*100, userSplit*model.getNumUsers());
                     printWriter.println(evaluator.getEvaluation(trainingSplit, userSplit, mode));
                     printWriter.println();
                 }

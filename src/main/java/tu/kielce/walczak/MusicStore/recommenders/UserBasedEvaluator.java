@@ -49,36 +49,36 @@ public class UserBasedEvaluator {
     private class SpearmanNearestRecommenderBuilder implements RecommenderBuilder {
         @Override
         public Recommender buildRecommender(DataModel dataModel) throws TasteException {
-            UserSimilarity similarity = new SpearmanCorrelationSimilarity(userModel);
-            UserNeighborhood neighborhood = new NearestNUserNeighborhood(neighborhoodSize, similarity, userModel);
-            return new GenericUserBasedRecommender(userModel, neighborhood, similarity);
+            UserSimilarity similarity = new SpearmanCorrelationSimilarity(dataModel);
+            UserNeighborhood neighborhood = new NearestNUserNeighborhood(neighborhoodSize, similarity, dataModel);
+            return new GenericUserBasedRecommender(dataModel, neighborhood, similarity);
         }
     }
 
     private class SpearmanThresholdRecommenderBuilder implements RecommenderBuilder {
         @Override
         public Recommender buildRecommender(DataModel dataModel) throws TasteException {
-            UserSimilarity similarity = new SpearmanCorrelationSimilarity(userModel);
-            UserNeighborhood neighborhood = new ThresholdUserNeighborhood(threshold, similarity, userModel);
-            return new GenericUserBasedRecommender(userModel, neighborhood, similarity);
+            UserSimilarity similarity = new SpearmanCorrelationSimilarity(dataModel);
+            UserNeighborhood neighborhood = new ThresholdUserNeighborhood(threshold, similarity, dataModel);
+            return new GenericUserBasedRecommender(dataModel, neighborhood, similarity);
         }
     }
 
     private class PearsonThresholdRecommenderBuilder implements RecommenderBuilder {
         @Override
         public Recommender buildRecommender(DataModel dataModel) throws TasteException {
-            UserSimilarity similarity = new PearsonCorrelationSimilarity(userModel);
-            UserNeighborhood neighborhood = new ThresholdUserNeighborhood(threshold, similarity, userModel);
-            return new GenericUserBasedRecommender(userModel, neighborhood, similarity);
+            UserSimilarity similarity = new PearsonCorrelationSimilarity(dataModel);
+            UserNeighborhood neighborhood = new ThresholdUserNeighborhood(threshold, similarity, dataModel);
+            return new GenericUserBasedRecommender(dataModel, neighborhood, similarity);
         }
     }
 
     private class PearsonNearestRecommenderBuilder implements RecommenderBuilder {
         @Override
         public Recommender buildRecommender(DataModel dataModel) throws TasteException {
-            UserSimilarity similarity = new PearsonCorrelationSimilarity(userModel);
-            UserNeighborhood neighborhood = new NearestNUserNeighborhood(neighborhoodSize, similarity, userModel);
-            return new GenericUserBasedRecommender(userModel, neighborhood, similarity);
+            UserSimilarity similarity = new PearsonCorrelationSimilarity(dataModel);
+            UserNeighborhood neighborhood = new NearestNUserNeighborhood(neighborhoodSize, similarity, dataModel);
+            return new GenericUserBasedRecommender(dataModel, neighborhood, similarity);
         }
     }
 }

@@ -9,6 +9,7 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import tu.kielce.walczak.MusicStore.entity.Customer;
 import tu.kielce.walczak.MusicStore.entity.Order;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
@@ -21,4 +22,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query(value = "from Order t where t.dateCreated BETWEEN :startDate AND :endDate")
     List<Order> findAllByDate(@Param("startDate")Date startDate, @Param("endDate")Date endDate);
+
+    @Query(value = "select sum(t.totalPrice) from Order t where t.dateCreated BETWEEN :startDate AND :endDate")
+    BigDecimal getProfitsBetweenDates(@Param("startDate")Date startDate, @Param("endDate")Date endDate);
+
+    @Query(value = "select sum(t.totalQuantity) from Order t where t.dateCreated BETWEEN :startDate AND :endDate")
+    Long getSalesBetweenDates(@Param("startDate")Date startDate, @Param("endDate")Date endDate);
 }

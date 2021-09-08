@@ -46,22 +46,29 @@ public class MixedItemSimilarity implements ItemSimilarity {
         return ((value - min) / (max - min));
     }
 
+    private double reverseScaleNormalize(double value, double min, double max) {
+        return ((max - value) / (max-min));
+    }
+
+    private double compareArtists(Album first, Album second){
+        if (first.getArtist().getArtistId().compareTo(second.getArtist().getArtistId()) == 0) {
+            return 1.0;
+        } else return 0.0;
+    }
+
     @Override
     public double itemSimilarity(long l, long l1) throws TasteException {
         Album first = this.fastMapAlbums.get(l);
         Album second = this.fastMapAlbums.get(l1);
 
-        double artistSimilarity = 0.0;
-        if (first.getArtist().getArtistId().compareTo(second.getArtist().getArtistId()) == 0) {
-            artistSimilarity = 1;
-        }
+        double artistSimilarity = compareArtists(first, second);
         double genreSimilarity = first.getCosineGenres(second);
         double subgenreSimilarity = first.getCosineSubgenres(second);
         // Maksymalna różnica to 56 lat, minimalna 0
         double yearSimilarity = Math.abs(
                 Double.parseDouble(first.getAlbumYear())
                 - Double.parseDouble(second.getAlbumYear()));
-        yearSimilarity = normalize(yearSimilarity, 0, endYear - startYear);
+        yearSimilarity = reverseScaleNormalize(yearSimilarity, 0, endYear - startYear);
 
 //        System.out.println("Mixed similarity for "
 //                + first.getAlbumTitle()

@@ -5,6 +5,7 @@ import org.apache.mahout.cf.taste.impl.common.FastByIDMap;
 import org.apache.mahout.cf.taste.impl.common.FastMap;
 import org.apache.mahout.cf.taste.impl.model.GenericDataModel;
 import org.apache.mahout.cf.taste.impl.model.GenericUserPreferenceArray;
+import org.apache.mahout.cf.taste.impl.model.file.FileDataModel;
 import org.apache.mahout.cf.taste.impl.neighborhood.NearestNUserNeighborhood;
 import org.apache.mahout.cf.taste.impl.neighborhood.ThresholdUserNeighborhood;
 import org.apache.mahout.cf.taste.impl.recommender.GenericItemBasedRecommender;
@@ -33,6 +34,9 @@ import tu.kielce.walczak.MusicStore.entity.Order;
 import tu.kielce.walczak.MusicStore.entity.OrderItem;
 import tu.kielce.walczak.MusicStore.recommenders.*;
 
+import javax.xml.crypto.Data;
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -79,7 +83,8 @@ public class RecommendationServiceImpl implements RecommendationService {
             System.out.println(a.getSubgenres());
             fastMapAlbums.put(a.getAlbumId(), a);
         }
-        this.userModel = fillPreferencesFromDB();
+//        this.userModel = fillPreferencesFromDB();
+        this.userModel = fillPreferencesFromCSV("preferences_v2.csv");
         this.itemModel = getDummyAllItems();
         createRecommenders();
     }
@@ -161,8 +166,8 @@ public class RecommendationServiceImpl implements RecommendationService {
         // Pobierz customer po ID z bazy danych
         List<Customer> allCustomers = customerRepository.findAll();
         // Tymczasowy limit dla szybszego restartu
-        for (Customer c : allCustomers.stream().limit(10).collect(Collectors.toList())) {
-//        for (Customer c : allCustomers) {
+//        for (Customer c : allCustomers.stream().limit(10).collect(Collectors.toList())) {
+        for (Customer c : allCustomers) {
             // Pobierz dla niego listę zamówień
             List<Order> customersOrders = orderRepository.findAllByCustomer(c);
             // Dla każdego zamówienia pobierz order item, połącz je w jedną listę
@@ -195,6 +200,17 @@ public class RecommendationServiceImpl implements RecommendationService {
 
         DataModel model = new GenericDataModel(preferences);
         return model;
+    }
+
+    private DataModel fillPreferencesFromCSV(String filename){
+        try {
+            DataModel dataModel = new FileDataModel(new File(filename));
+            return dataModel;
+        } catch (IOException e) {
+            System.out.println("Nie udało się utworzyć modelu");
+            e.printStackTrace();
+            return null;
+        }
     }
 
     public void getDummyItemBasedRecs() throws TasteException {
@@ -344,7 +360,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     public List<AlbumWrapper> getBestsellers(int size) {
         // Pobierz wszystkie zamówienia złożone w ciągu zeszłego miesiąca
         Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.DATE, -365);
+        cal.add(Calendar.DATE, -30);
         List<Order> recentOrders = orderRepository.findAllByDateCreatedAfter(cal.getTime());
         // Wyznacz dla każdego przedmiotu z nich liczbę kopii do id
         Map<Long, Long> productAmounts = new HashMap<>();
